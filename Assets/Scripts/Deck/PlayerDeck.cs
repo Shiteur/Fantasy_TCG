@@ -23,6 +23,11 @@ public class PlayerDeck: MonoBehaviour
         Debug.Log($"Deck initialisé avec {drawStack.Count} cartes.");
     }
 
+    public void CountCards()
+    {
+        Debug.Log($"Il reste {drawStack.Count} cartes dans le deck.");
+    }
+
     public void ShuffleDeck() { 
         for (int i = 0; i < drawStack.Count; i++)
         {
@@ -46,5 +51,10 @@ public class PlayerDeck: MonoBehaviour
         CardData drawnCard = drawStack[lastIndex];
         drawStack.RemoveAt(lastIndex);
         return drawnCard;
+    }
+
+    public CardData DrawLifeCard()
+    {
+        return DrawCard();
     }
 }

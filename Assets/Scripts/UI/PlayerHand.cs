@@ -21,6 +21,7 @@ public class PlayerHand : MonoBehaviour
 
         CardView newCard = Instantiate(cardPrefab, transform);
         newCard.SetCardData(cardData);
+        newCard.SetFaceDown(false);
         newCard.Clicked += OnCardClicked;
         cardsInGHand.Add(newCard);
     }

@@ -17,6 +17,7 @@ public class CardView : MonoBehaviour, IPointerClickHandler
     [SerializeField] private TMP_Text lifeText;
     [SerializeField] private TMP_Text descriptionText;
     [SerializeField] private GameObject selectionBorder;
+    [SerializeField] private GameObject cardBackOverlay;
 
     [Header("Panel")]
     [SerializeField] private GameObject costPanel;
@@ -61,6 +62,22 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         if(selectionBorder != null)
         {
             selectionBorder.SetActive(selected);
+        }
+    }
+
+    public void UpdateHealthText(int currentHealth, int maxHealth)
+    {
+        if(healthText != null)
+        {
+            healthText.text = currentHealth.ToString();
+        }
+    }
+
+    public void SetFaceDown(bool faceDawn)
+    {
+        if(cardBackOverlay != null)
+        {
+            cardBackOverlay.SetActive(faceDawn);
         }
     }
 

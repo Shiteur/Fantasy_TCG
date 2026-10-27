@@ -20,6 +20,6 @@ MonoBehaviour:
   secondaryColor: 0
   manaCost: 0
   attack: 5
-  maxHealth: 5
+  maxHealth: 0
   initialLifeCard: 5
   description: Le chef des Barbares

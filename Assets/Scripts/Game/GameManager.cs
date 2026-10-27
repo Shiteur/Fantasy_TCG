@@ -5,15 +5,21 @@ public class GameManager : MonoBehaviour
     [Header("Deck et main")]
     [SerializeField] private PlayerHand playerHand;
     [SerializeField] private PlayerDeck playerDeck;
+    [SerializeField] private PlayerDeck opponentDeck;
 
     [Header("Plateau")]
     [SerializeField] private ChampionDisplay championDisplay;
+    [SerializeField] private OpponentChampionDisplay opponentChampionDisplay;
     [SerializeField] private ManaSystem manaSystem;
     [SerializeField] private Transform playerUnitZone;
+    [SerializeField] private OpponentUnitSpawner opponentUnitSpawner;
+    [SerializeField] private LifeZoneManager playerLifeManager;
+    [SerializeField] private LifeZoneManager opponentLifeManager;
 
     [Header("Configuration de la partie")]
     [SerializeField] private bool playerGoesFirst = true;
     [SerializeField] private int startingHandSize = 3;
+    [SerializeField] private CombatManager combatManager;
 
     private bool gameStarted;
     private int turnNumber = 0;
@@ -31,7 +37,7 @@ public class GameManager : MonoBehaviour
     {
         if(gameStarted) return;
 
-        if(playerHand == null || playerDeck == null || championDisplay == null || manaSystem == null)
+        if(playerHand == null || playerDeck == null || championDisplay == null || manaSystem == null || opponentChampionDisplay == null || playerLifeManager == null || opponentLifeManager == null || opponentDeck == null || opponentUnitSpawner == null || combatManager == null || playerUnitZone == null)
         {
             Debug.LogError("GameManager n'est pas correctement configuré !");
             return;
@@ -39,16 +45,24 @@ public class GameManager : MonoBehaviour
 
         gameStarted = true;
 
-        // 1. Prépare le deck principal.
+        // 1. Prépare les decks.
         playerDeck.InitializeDeck();
+        opponentDeck.InitializeDeck();
 
-        //2. Prépare le deck de mana.
+        //2. Prépare le deck de mana du joueur.
         manaSystem.Initialize();
 
-        // 3. Affiche le champion du joueur.
+        // 3. Affiche les champions du joueur et de l'adversaire.
         championDisplay.ShowChampion();
+        opponentChampionDisplay.ShowChampion();
 
-        // 4. Distribue la main de départ.
+        // 4. Initialise la pile de vie du joueur et de l'adversaire.
+        playerLifeManager.InitializeLife();
+        opponentLifeManager.InitializeLife();
+        playerDeck.CountCards();
+        opponentDeck.CountCards();
+
+        // 5. Distribue la main de départ.
         for (int i = 0; i < startingHandSize; i++)
         {
             DrawCard();
@@ -76,6 +90,13 @@ public class GameManager : MonoBehaviour
         // Réacitve tout le mana épuisé pour le nouveau tour.
         RefreshMana();
 
+        // Réactive toutes les unités du joueur.
+        ReadyAllUnit();
+        if (opponentUnitSpawner != null)
+        {
+            opponentUnitSpawner.ReadyAllOpponentUnits();
+        }
+
         bool shouldDraw = !(turnNumber == 1 && playerGoesFirst);
 
         if(shouldDraw)
@@ -88,6 +109,15 @@ public class GameManager : MonoBehaviour
             manaSystem.AddManaCards(2);
         }
 
+        if (combatManager != null)
+        {
+            combatManager.ClearCombatSelections();
+        }
+        else
+        {
+            Debug.LogWarning("CombatManager n'est pas assigné dans le GameManager.");
+        }
+
         Debug.Log($"Tour {turnNumber} commencé.");
         Debug.Log($"Attaque autorisée: {CanAttack}");
     }
@@ -97,6 +127,7 @@ public class GameManager : MonoBehaviour
         if (drawnCard != null)
         {
             playerHand.AddCard(drawnCard);
+            playerDeck.CountCards();
         }
     }
 
@@ -164,6 +195,11 @@ public class GameManager : MonoBehaviour
             uniteState = selectedCard.gameObject.AddComponent<UnitCardState>();
         }
         uniteState.Initialize(turnNumber);
+
+        if(selectedCard.GetComponent<UnitClickHandler>() == null)
+        {
+            selectedCard.gameObject.AddComponent<UnitClickHandler>();
+        }
 
         Debug.Log($"{data.cardName} a été jouée !");
     }

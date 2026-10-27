@@ -15,6 +15,12 @@ public class ChampionDisplay : MonoBehaviour
             return;
         }
 
+        if (championData.cardType != CardType.Champion)
+        {
+            Debug.LogError("Le champion assigné n'est pas de type Champion !");
+            return;
+        }
+
         if (cardPrefab == null || championZone == null) {
             Debug.LogError("CardPrefab ou ChampionZone n'est pas assigné !");
             return;
