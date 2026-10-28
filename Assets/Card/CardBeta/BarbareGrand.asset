@@ -22,4 +22,5 @@ MonoBehaviour:
   attack: 4
   maxHealth: 3
   initialLifeCard: 0
+  abilities: 02000000i
   description: "Un barbare qui a servecu  \xE0 de nombreux combats"

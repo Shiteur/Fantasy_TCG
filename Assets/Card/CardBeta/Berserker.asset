@@ -22,4 +22,5 @@ MonoBehaviour:
   attack: 15
   maxHealth: 3
   initialLifeCard: 0
-  description: Un barbaree qui a soif de sang.
+  abilities: 01000000i
+  description: Un barbare qui a soif de sang.

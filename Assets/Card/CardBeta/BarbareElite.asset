@@ -22,4 +22,5 @@ MonoBehaviour:
   attack: 8
   maxHealth: 3
   initialLifeCard: 0
+  abilities: 01000000i
   description: Un des plus puissant parmis les barbares

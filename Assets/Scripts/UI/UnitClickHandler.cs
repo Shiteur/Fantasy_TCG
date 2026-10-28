@@ -14,12 +14,18 @@ public class UnitClickHandler : MonoBehaviour, IPointerClickHandler
             return;
         }
 
-        if(UnitSlectionManager.Instance == null)
+        if (CombatManager.Instance != null && CombatManager.Instance.IsWaitingForBlocker())
+        {
+            CombatManager.Instance.TryInterceptWith(unitState);
+            return;
+        }
+
+        if (UnitSlectionManager.Instance == null)
         {
             Debug.LogWarning("UnitSlectionManager n'est pas présent dans la scène.");
             return;
         }
 
-        UnitSlectionManager.Instance?.SelectUnit(unitState);
+        UnitSlectionManager.Instance.SelectUnit(unitState);
     }
 }

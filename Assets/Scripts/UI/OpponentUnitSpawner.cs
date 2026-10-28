@@ -7,6 +7,10 @@ public class OpponentUnitSpawner : MonoBehaviour
     [SerializeField] private CardView cardPrefab;
     [SerializeField] private Transform opponentUnitZone;
 
+    [Header("Défausse")]
+    [SerializeField] private TrashManager trashManager;
+
+    public UnitCardState LastSpawnedUnit { get; private set; }
 
     public void SpawnUnit()
     {
@@ -46,7 +50,10 @@ public class OpponentUnitSpawner : MonoBehaviour
             unit.gameObject.AddComponent<OpponentUnitClickHandler>();
         }
 
+        state.SetTrashManager(trashManager);
         state.Initialize(0);
+
+        LastSpawnedUnit = state;
         Debug.Log($"Unité adverse créée: {unitToSpawn.cardName}, rotation : {unit.transform.localEulerAngles}  ");
     }
 
@@ -70,6 +77,29 @@ public class OpponentUnitSpawner : MonoBehaviour
         }
 
         Debug.Log("Toutes les unités adverses sont prêtes.");
+    }
+
+
+    public UnitCardState[] GetOpponentUnits()
+    {
+        if (opponentUnitZone == null)
+        {
+            Debug.LogWarning("La zone des unités adverses n'est pas assignée.");
+            return System.Array.Empty<UnitCardState>();
+        }
+
+        System.Collections.Generic.List<UnitCardState> units =
+            new System.Collections.Generic.List<UnitCardState>();
+
+        foreach (Transform child in opponentUnitZone)
+        {
+            UnitCardState state = child.GetComponent<UnitCardState>();
+
+            if (state != null)
+                units.Add(state);
+        }
+
+        return units.ToArray();
     }
 
 }

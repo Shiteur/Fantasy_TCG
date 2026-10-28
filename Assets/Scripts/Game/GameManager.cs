@@ -12,6 +12,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private OpponentChampionDisplay opponentChampionDisplay;
     [SerializeField] private ManaSystem manaSystem;
     [SerializeField] private Transform playerUnitZone;
+    [SerializeField] private TrashManager playerTrashManager;
     [SerializeField] private OpponentUnitSpawner opponentUnitSpawner;
     [SerializeField] private LifeZoneManager playerLifeManager;
     [SerializeField] private LifeZoneManager opponentLifeManager;
@@ -23,6 +24,9 @@ public class GameManager : MonoBehaviour
 
     private bool gameStarted;
     private int turnNumber = 0;
+
+    public TurnOwner CurrentTurnOwner { get; private set; } = TurnOwner.Player;
+    public bool IsPlayerTurn => CurrentTurnOwner == TurnOwner.Player;
 
     public int TurnNumber => turnNumber;
     public bool CanAttack => turnNumber > 1;
@@ -76,6 +80,7 @@ public class GameManager : MonoBehaviour
         ReadyAllUnit();
 
         turnNumber = 1;
+        CurrentTurnOwner = playerGoesFirst ? TurnOwner.Player : TurnOwner.Opponent;
 
         Debug.Log($"Partie commencée. Tour {turnNumber}.");
         Debug.Log($"Attaque autorisée: {CanAttack}");
@@ -84,43 +89,53 @@ public class GameManager : MonoBehaviour
     public void EndTurn() {
         if(!gameStarted) return;
 
-        //Prépare le prochain tour.
-        turnNumber++;
-
-        // Réacitve tout le mana épuisé pour le nouveau tour.
-        RefreshMana();
-
-        // Réactive toutes les unités du joueur.
-        ReadyAllUnit();
-        if (opponentUnitSpawner != null)
+        if(CurrentTurnOwner == TurnOwner.Player)
         {
-            opponentUnitSpawner.ReadyAllOpponentUnits();
-        }
+            CurrentTurnOwner = TurnOwner.Opponent;
+            if(combatManager != null)
+            {
+                combatManager.ClearCombatSelections();
+            }
 
-        bool shouldDraw = !(turnNumber == 1 && playerGoesFirst);
-
-        if(shouldDraw)
-        {
-            DrawCard();
-        }
-
-        if(turnNumber > 1)
-        {
-            manaSystem.AddManaCards(2);
-        }
-
-        if (combatManager != null)
-        {
-            combatManager.ClearCombatSelections();
+            Debug.Log("Tour de l'adversaire commencé.");
+            GetComponent<OpponentTurnManager>()?.StartOpponentTurn();
         }
         else
         {
-            Debug.LogWarning("CombatManager n'est pas assigné dans le GameManager.");
+            Debug.LogWarning("Le tour adverse doit maintenant se terminer automatiquement.");
+        }
+    }
+
+    public void EndOpponentTurn()
+    {
+        if (!gameStarted)
+            return;
+
+        if (CurrentTurnOwner != TurnOwner.Opponent)
+        {
+            Debug.LogWarning("Ce n'est pas le tour de l'adversaire.");
+            return;
         }
 
-        Debug.Log($"Tour {turnNumber} commencé.");
-        Debug.Log($"Attaque autorisée: {CanAttack}");
+        CurrentTurnOwner = TurnOwner.Player;
+        turnNumber++;
+
+        RefreshMana();
+        ReadyAllUnit();
+
+        if (opponentUnitSpawner != null)
+            opponentUnitSpawner.ReadyAllOpponentUnits();
+
+        DrawCard();
+        manaSystem.AddManaCards(2);
+
+        if (combatManager != null)
+            combatManager.ClearCombatSelections();
+
+        Debug.Log($"Tour {turnNumber} du joueur commencé.");
+        Debug.Log($"Attaque autorisée : {CanAttack}");
     }
+
     public void DrawCard() {
         CardData drawnCard = playerDeck.DrawCard();
 
@@ -194,6 +209,7 @@ public class GameManager : MonoBehaviour
         {
             uniteState = selectedCard.gameObject.AddComponent<UnitCardState>();
         }
+        uniteState.SetTrashManager(playerTrashManager);
         uniteState.Initialize(turnNumber);
 
         if(selectedCard.GetComponent<UnitClickHandler>() == null)
@@ -234,9 +250,9 @@ public class GameManager : MonoBehaviour
             if (unitState != null)
             {
                 unitState.Ready();
+                Debug.Log($"Unité peut attaquer: {unitState.CanAttackOnTurn(turnNumber)}.");
             }
 
-            Debug.Log($"Unité peut attaquer: {unitState.CanAttackOnTurn(turnNumber)}.");
         }
     }
 
