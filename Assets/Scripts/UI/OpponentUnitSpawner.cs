@@ -6,6 +6,7 @@ public class OpponentUnitSpawner : MonoBehaviour
     [SerializeField] private CardData unitToSpawn;
     [SerializeField] private CardView cardPrefab;
     [SerializeField] private Transform opponentUnitZone;
+    [SerializeField] private GameManager gameManager;
 
     [Header("Défausse")]
     [SerializeField] private TrashManager trashManager;
@@ -48,6 +49,10 @@ public class OpponentUnitSpawner : MonoBehaviour
         if(unit.GetComponent<OpponentUnitClickHandler>() == null)
         {
             unit.gameObject.AddComponent<OpponentUnitClickHandler>();
+
+            OpponentUnitClickHandler clickHandler =unit.GetComponent<OpponentUnitClickHandler>();
+
+            clickHandler.SetGameManager(gameManager);
         }
 
         state.SetTrashManager(trashManager);

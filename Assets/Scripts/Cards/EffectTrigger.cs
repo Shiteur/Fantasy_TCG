@@ -7,3 +7,10 @@ public enum EffectTrigger
     EndOfTurn,  //A la fin du tour
     Counter     //Pendant une attaque de l'adversaire
 }
+
+public enum CardEffectType
+{
+    DrawCard,
+    DamageEnemyUnit,
+    DamageTargetEnemyUnit
+}

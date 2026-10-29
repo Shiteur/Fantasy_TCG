@@ -22,6 +22,10 @@ public class GameManager : MonoBehaviour
     [SerializeField] private int startingHandSize = 3;
     [SerializeField] private CombatManager combatManager;
 
+    private bool waitingForEffectTarget;
+    private int pendingEffectDamage;
+    private CardData pendingEffectCard;
+
     private bool gameStarted;
     private int turnNumber = 0;
 
@@ -91,6 +95,8 @@ public class GameManager : MonoBehaviour
 
         if(CurrentTurnOwner == TurnOwner.Player)
         {
+            ResolveTurnEffects(EffectTrigger.EndOfTurn);
+
             CurrentTurnOwner = TurnOwner.Opponent;
             if(combatManager != null)
             {
@@ -123,8 +129,7 @@ public class GameManager : MonoBehaviour
         RefreshMana();
         ReadyAllUnit();
 
-        if (opponentUnitSpawner != null)
-            opponentUnitSpawner.ReadyAllOpponentUnits();
+        ResolveTurnEffects(EffectTrigger.StartOfTurn);
 
         DrawCard();
         manaSystem.AddManaCards(2);
@@ -210,6 +215,7 @@ public class GameManager : MonoBehaviour
             uniteState = selectedCard.gameObject.AddComponent<UnitCardState>();
         }
         uniteState.SetTrashManager(playerTrashManager);
+        uniteState.SetGameManager(this);
         uniteState.Initialize(turnNumber);
 
         if(selectedCard.GetComponent<UnitClickHandler>() == null)
@@ -218,6 +224,7 @@ public class GameManager : MonoBehaviour
         }
 
         Debug.Log($"{data.cardName} a été jouée !");
+        ResolveCardEffects(data, EffectTrigger.OnPlay);
     }
 
 
@@ -238,6 +245,121 @@ public class GameManager : MonoBehaviour
         {
             Debug.LogWarning("Pas assez de mana disponible !");
         }
+    }
+    public bool IsWaitingForEffectTarget()
+    {
+        return waitingForEffectTarget;
+    }
+    public void ResolveCardEffectsOnDeath(CardData data)
+    {
+        ResolveCardEffects(data, EffectTrigger.OnDeath);
+    }
+    public void ResolveTurnEffects(EffectTrigger trigger)
+    {
+        if (playerUnitZone == null)
+            return;
+
+        foreach (Transform unitTransform in playerUnitZone)
+        {
+            UnitCardState unitState = unitTransform.GetComponent<UnitCardState>();
+            CardView cardView = unitTransform.GetComponent<CardView>();
+
+            if (unitState == null || cardView == null || cardView.Data == null)
+                continue;
+
+            ResolveCardEffects(cardView.Data, trigger);
+        }
+    }
+    public void SelectEffectTarget(UnitCardState target)
+    {
+        if (!waitingForEffectTarget || target == null)
+            return;
+
+        waitingForEffectTarget = false;
+
+        target.TakeDamage(pendingEffectDamage);
+
+        Debug.Log(
+            $"Effet de {pendingEffectCard.cardName} : {pendingEffectDamage} dégâts infligés à {target.name}."
+        );
+
+        pendingEffectCard = null;
+        pendingEffectDamage = 0;
+    }
+    private void BeginTargetedDamageEffect(CardData data, int damage)
+    {
+        if (opponentUnitSpawner == null ||
+            opponentUnitSpawner.GetOpponentUnits().Length == 0)
+        {
+            Debug.Log("Aucune unité adverse à cibler.");
+            return;
+        }
+
+        waitingForEffectTarget = true;
+        pendingEffectDamage = damage;
+        pendingEffectCard = data;
+
+        Debug.Log(
+            $"Choisis une unité adverse pour l'effet de {data.cardName}."
+        );
+    }
+
+    private void ResolveCardEffects(CardData data, EffectTrigger trigger)
+    {
+        if(data == null || data.effects == null)
+        {
+            return;
+        }
+
+        foreach (CardEffectData effect in data.effects)
+        {
+            if(effect == null || effect.trigger != trigger)
+            {
+                continue;
+            }
+
+            switch (effect.effectType)
+            {
+                case CardEffectType.DrawCard:
+                    for(int i=0; i< effect.value; i++)
+                    {
+                        DrawCard();
+                    }
+                    Debug.Log($"{data.cardName} déclenche un effet : pioche de {effect.value} carte(s)");
+                    break;
+                case CardEffectType.DamageEnemyUnit:
+                    DamageFirstEnemyUnit(effect.value);
+                    break;
+                case CardEffectType.DamageTargetEnemyUnit:
+                    BeginTargetedDamageEffect(data, effect.value);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    private void DamageFirstEnemyUnit(int damage) {
+        if (opponentUnitSpawner == null)
+        {
+            Debug.LogError("OpponentUnitSpawner n'est pas assigné.");
+            return;
+        }
+
+        UnitCardState[] enemyUnits = opponentUnitSpawner.GetOpponentUnits();
+
+        foreach (UnitCardState enemy in enemyUnits)
+        {
+            if (enemy == null)
+                continue;
+
+            enemy.TakeDamage(damage);
+
+            Debug.Log($"{enemy.name} reçoit {damage} dégâts grâce à un effet.");
+            return;
+        }
+
+        Debug.Log("Aucune unité adverse à cibler.");
     }
 
     private void ReadyAllUnit()

@@ -10,16 +10,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 83e94f7d3af7d65459a8bfa3540c46f0, type: 3}
-  m_Name: BlueYellowChampionTest
+  m_Name: PirateMatelot
   m_EditorClassIdentifier: Assembly-CSharp::CardData
-  cardId: C1
-  cardName: Test double color
-  cardType: 0
+  cardId: U16
+  cardName: Matelot
+  cardType: 1
   cardColor: 1
-  hasSecondaryColor: 1
-  secondaryColor: 3
-  manaCost: 0
-  attack: 5
-  maxHealth: 0
-  initialLifeCard: 5
-  description: Une carte de test
+  hasSecondaryColor: 0
+  secondaryColor: 0
+  manaCost: 2
+  attack: 2
+  maxHealth: 2
+  initialLifeCard: 0
+  abilities: 
+  effects:
+  - trigger: 0
+    effectType: 1
+    value: 2
+  description: 

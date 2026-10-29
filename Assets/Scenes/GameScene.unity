@@ -148,7 +148,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0be944aed48eabe4fb7e80dbcd4339b2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ChampionDisplay
-  championData: {fileID: 11400000, guid: b95b51aad4427674e9290607a5efb247, type: 2}
+  championData: {fileID: 11400000, guid: 9c85e6ba402da1341b16c88fdb31aecd, type: 2}
   cardPrefab: {fileID: 665403114645450997, guid: f28bd9f3f8565164094711f5038f67e3, type: 3}
   championZone: {fileID: 2048999355}
 --- !u!4 &14539729
@@ -1145,9 +1145,9 @@ MonoBehaviour:
     m_Top: 4
     m_Bottom: 0
   m_ChildAlignment: 0
-  m_Spacing: -100
-  m_ChildForceExpandWidth: 1
-  m_ChildForceExpandHeight: 1
+  m_Spacing: -95
+  m_ChildForceExpandWidth: 0
+  m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 0
   m_ChildControlHeight: 0
   m_ChildScaleWidth: 0
@@ -1495,6 +1495,7 @@ MonoBehaviour:
   gameManager: {fileID: 426734002}
   opponentUnitSpawner: {fileID: 2101762362}
   combatManager: {fileID: 565861996}
+  playerUnitZone: {fileID: 1723437430}
   delayBeforeAttack: 1
   delayBetweenAttacks: 1.5
 --- !u!1 &499192724
@@ -2248,7 +2249,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6dfaefa99fa71c04ab199665df1f935b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LifeZoneManager
-  championData: {fileID: 11400000, guid: b95b51aad4427674e9290607a5efb247, type: 2}
+  championData: {fileID: 11400000, guid: 9c85e6ba402da1341b16c88fdb31aecd, type: 2}
   playerDeck: {fileID: 1664743958}
   playerHand: {fileID: 2056370619}
   revealRecoveredCard: 1
@@ -3224,8 +3225,8 @@ MonoBehaviour:
     m_Bottom: 0
   m_ChildAlignment: 0
   m_Spacing: -100
-  m_ChildForceExpandWidth: 1
-  m_ChildForceExpandHeight: 1
+  m_ChildForceExpandWidth: 0
+  m_ChildForceExpandHeight: 0
   m_ChildControlWidth: 0
   m_ChildControlHeight: 0
   m_ChildScaleWidth: 0
@@ -4220,7 +4221,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c8c9549d9a79a084492ba3ed455ba303, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ManaSystem
-  manaDeckData: {fileID: 11400000, guid: 39e9820801121a5458e8e1d2510195f2, type: 2}
+  manaDeckData: {fileID: 11400000, guid: bfae27f198549da45acda3b6fad82a1c, type: 2}
   manaCardPrefab: {fileID: 665403114645450997, guid: f28bd9f3f8565164094711f5038f67e3, type: 3}
   manaZone: {fileID: 1773339410}
 --- !u!4 &1246473725
@@ -5150,7 +5151,7 @@ MonoBehaviour:
   m_CellSize: {x: 96, y: 135}
   m_Spacing: {x: 10, y: 10}
   m_Constraint: 2
-  m_ConstraintCount: 4
+  m_ConstraintCount: 3
 --- !u!1 &1633327819
 GameObject:
   m_ObjectHideFlags: 0
@@ -5565,7 +5566,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9009581936424b74ba02fa94559fe602, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerDeck
-  deckData: {fileID: 11400000, guid: e1e8ea4422131954aa96dd43e4d196e0, type: 2}
+  deckData: {fileID: 11400000, guid: 8ff5f50297cb74d45b35142661355322, type: 2}
 --- !u!4 &1664743959
 Transform:
   m_ObjectHideFlags: 0
@@ -6977,6 +6978,7 @@ MonoBehaviour:
   unitToSpawn: {fileID: 11400000, guid: 453702826f00f974794315755c22ac8c, type: 2}
   cardPrefab: {fileID: 665403114645450997, guid: f28bd9f3f8565164094711f5038f67e3, type: 3}
   opponentUnitZone: {fileID: 1712201613}
+  gameManager: {fileID: 426734002}
   trashManager: {fileID: 1485125894}
 --- !u!1 &2110104523
 GameObject:

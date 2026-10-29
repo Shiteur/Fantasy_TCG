@@ -17,6 +17,7 @@ public class CardData : ScriptableObject
     [Min(0)] public int initialLifeCard; // The number of life cards the player starts with when this card is their champion.
 
     public CardAbility[] abilities;
+    public CardEffectData[] effects;
 
     public string description;
 }

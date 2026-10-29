@@ -4,6 +4,12 @@ using UnityEngine.EventSystems;
 public class OpponentUnitClickHandler : MonoBehaviour, IPointerClickHandler
 {
     private UnitCardState unitState;
+    private GameManager gameManager;
+
+    public void SetGameManager(GameManager manager)
+    {
+        gameManager = manager;
+    }
 
     private void Awake()
     {
@@ -20,7 +26,13 @@ public class OpponentUnitClickHandler : MonoBehaviour, IPointerClickHandler
             return;
         }
 
-        if(CombatManager.Instance == null)
+        if (gameManager != null && gameManager.IsWaitingForEffectTarget())
+        {
+            gameManager.SelectEffectTarget(unitState);
+            return;
+        }
+
+        if (CombatManager.Instance == null)
         {
             Debug.LogWarning("CombatManager instance is null.");
             return;

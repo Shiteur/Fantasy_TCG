@@ -8,6 +8,7 @@ public class OpponentTurnManager : MonoBehaviour
     [SerializeField] private GameManager gameManager;
     [SerializeField] private OpponentUnitSpawner opponentUnitSpawner;
     [SerializeField] private CombatManager combatManager;
+    [SerializeField] private Transform playerUnitZone;
 
     [Header("Délais")]
     [SerializeField] private float delayBeforeAttack = 1f;
@@ -25,6 +26,8 @@ public class OpponentTurnManager : MonoBehaviour
 
         if (gameManager.CurrentTurnOwner != TurnOwner.Opponent)
             return;
+
+        opponentUnitSpawner.ReadyAllOpponentUnits();
 
         if (opponentTurnCoroutine != null)
             StopCoroutine(opponentTurnCoroutine);
@@ -51,17 +54,23 @@ public class OpponentTurnManager : MonoBehaviour
             if (attacker.IsExhausted || !attacker.CanAttackOnTurn(gameManager.TurnNumber))
                 continue;
 
-            Debug.Log("L'adversaire attaque ton Champion.");
+            UnitCardState target = FindExhaustedPlayerUnit();
 
-            combatManager.StartTestOpponentAttack(
-                attacker,
-                null,
-                true
-            );
+            if(target != null)
+            {
+                Debug.Log("L'adversaire attaque une Unité épuisée.");
+                combatManager.StartTestOpponentAttack(attacker, target, false);
+            }
+            else
+            {
+                Debug.Log("L'adversaire attaque ton Champion.");
 
-            // On attend la résolution de l'attaque avant de poursuivre.
-            while (combatManager.IsWaitingForBlocker())
-                yield return null;
+                combatManager.StartTestOpponentAttack(attacker, null, true);
+            }
+
+                // On attend la résolution de l'attaque avant de poursuivre.
+                while (combatManager.IsWaitingForBlocker())
+                    yield return null;
 
             yield return new WaitForSeconds(delayBetweenAttacks);
         }
@@ -72,5 +81,26 @@ public class OpponentTurnManager : MonoBehaviour
         }
 
         opponentTurnCoroutine = null;
+    }
+
+    private UnitCardState FindExhaustedPlayerUnit()
+    {
+        if(playerUnitZone == null)
+        {
+            Debug.LogWarning("playerUnitZone n'est pas assigné.");
+            return null;
+        }
+
+        foreach(Transform child in playerUnitZone)
+        {
+            UnitCardState unit = child.GetComponent<UnitCardState>();
+
+            if(unit != null && unit.IsExhausted)
+            {
+                return unit;
+            }
+        }
+
+        return null;
     }
 }

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System.Collections;
 
 public class TrashManager : MonoBehaviour
 {
@@ -26,7 +27,20 @@ public class TrashManager : MonoBehaviour
         card.transform.SetParent(trashZone, false);
         card.gameObject.AddComponent<TrashCardClickForwarder>();
         card.transform.localScale = Vector3.one;
+        // Réinitialise la rotation locale de la carte dans la Trash.
         card.transform.localRotation = Quaternion.Euler(0f, 0f, cardRotation);
+
+        RectTransform rect = card.GetComponent<RectTransform>();
+
+        if (rect != null)
+        {
+            float targetRotation = card.transform.eulerAngles.z > 90f && card.transform.eulerAngles.z < 270f ? 180f : 0f;
+            StartCoroutine(ResetTrashCardRotation(rect, targetRotation));
+        }
+        else
+        {
+            card.transform.rotation = Quaternion.Euler(0f, 0f, cardRotation);
+        }
 
         UnitClickHandler playerClickHandler = card.GetComponent<UnitClickHandler>();
 
@@ -73,6 +87,16 @@ public class TrashManager : MonoBehaviour
         }
 
         return result;
+    }
+
+    private IEnumerator ResetTrashCardRotation(RectTransform cardTransform, float targetRotation)
+    {
+        yield return null;
+
+        if (cardTransform != null)
+        {
+            cardTransform.rotation = Quaternion.Euler(0f, 0f, targetRotation);
+        }
     }
 }
 

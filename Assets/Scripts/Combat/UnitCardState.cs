@@ -6,6 +6,7 @@ public class UnitCardState : MonoBehaviour
     [SerializeField] private int summonedOnTurn;
     [SerializeField] private int currentHealth;
     [SerializeField] private TrashManager trashManager;
+    [SerializeField] private GameManager gameManager;
 
     public int MaxHealth { get; private set; }
 
@@ -79,6 +80,10 @@ public class UnitCardState : MonoBehaviour
         return false;
     }
 
+    public void SetGameManager(GameManager manager)
+    {
+        gameManager = manager;
+    }
     public bool CanIntercept()
     {
         return !IsExhausted && HasAbility(CardAbility.Blocker);
@@ -125,10 +130,13 @@ public class UnitCardState : MonoBehaviour
 
         if (currentHealth <= 0)
         {
+
             CardView card = GetComponent<CardView>();
 
             if(trashManager != null && card != null)
             {
+                gameManager?.ResolveCardEffectsOnDeath(GetComponent<CardView>().Data);
+
                 trashManager.AddCard(card);
             }
             else
