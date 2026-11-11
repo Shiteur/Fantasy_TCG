@@ -12,6 +12,14 @@ public class OpponentChampionDisplay : MonoBehaviour
     public CardData ChampionData => championData;
     public CardView ChampionView => championView;
 
+    public int CurrentAttack { get; private set; }
+
+    public void ModifyAttack(int amount)
+    {
+        CurrentAttack += amount;
+        Debug.Log($"Attaque du champion adverse : {CurrentAttack}");
+    }
+
     public void ShowChampion()
     {
         if (championData == null)
@@ -40,6 +48,7 @@ public class OpponentChampionDisplay : MonoBehaviour
 
         championView = Instantiate(cardPrefab, championZone);
         championView.SetCardData(championData);
+        CurrentAttack = championData.attack;
 
         if (championView.GetComponent<OpponentChampionClickHandler>() == null)
         {

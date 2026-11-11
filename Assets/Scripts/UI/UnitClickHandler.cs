@@ -4,6 +4,12 @@ using UnityEngine.EventSystems;
 [RequireComponent(typeof(CardView))]
 public class UnitClickHandler : MonoBehaviour, IPointerClickHandler
 {
+    private GameManager gameManager;
+
+    public void SetGameManager(GameManager manager)
+    {
+        gameManager = manager;
+    }
 
     public void OnPointerClick(PointerEventData enventData) {
         UnitCardState unitState = GetComponent<UnitCardState>();
@@ -11,6 +17,12 @@ public class UnitClickHandler : MonoBehaviour, IPointerClickHandler
         if (unitState == null)
         {
             Debug.LogWarning("Cette carte n'a pas de UnitCardState.");
+            return;
+        }
+
+        if (gameManager != null && gameManager.IsWaitingForHealTarget())
+        {
+            gameManager.SelectHealTarget(unitState);
             return;
         }
 

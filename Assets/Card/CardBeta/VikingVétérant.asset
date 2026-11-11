@@ -23,4 +23,8 @@ MonoBehaviour:
   maxHealth: 5
   initialLifeCard: 0
   abilities: 
-  description: "Un Viking \xE0 la retraite"
+  effects:
+  - trigger: 3
+    effectType: 3
+    value: 2
+  description: On Death Heal 2 Health

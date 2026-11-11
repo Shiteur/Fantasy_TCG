@@ -22,4 +22,9 @@ MonoBehaviour:
   attack: 11
   maxHealth: 6
   initialLifeCard: 0
+  abilities: 
+  effects:
+  - trigger: 0
+    effectType: 1
+    value: 2
   description: Un puissant et sage Viking

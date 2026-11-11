@@ -196,6 +196,12 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
+        if (gameManager.IsResolvingPlayerTurnStart)
+        {
+            Debug.Log("Impossible d'attaquer pendant la résolution des effets de début de tour.");
+            return;
+        }
+
         if(!attacker.CanAttackOnTurn(gameManager.TurnNumber))
         {
             Debug.Log("Cette unité ne peut pas attaquer ce tour.");

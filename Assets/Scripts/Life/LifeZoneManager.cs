@@ -84,4 +84,33 @@ public class LifeZoneManager : MonoBehaviour
         Debug.Log("Une carte de vie a rejoint la main.");
         return true;
     }
+
+    public bool AddLifeCard()
+    {
+        if (playerDeck == null || cardPrefab == null || lifeZone == null)
+        {
+            Debug.LogError("LifeZoneManager : référence manquante !");
+            return false;
+        }
+
+        CardData lifeCardData = playerDeck.DrawCard();
+
+        if (lifeCardData == null)
+        {
+            Debug.LogWarning("Impossible de gagner une carte vie : le deck est vide.");
+            return false;
+        }
+
+        CardView card = Instantiate(cardPrefab, lifeZone);
+        card.SetCardData(lifeCardData);
+        card.SetFaceDown(true);
+
+        card.transform.localScale = Vector3.one;
+        card.transform.localRotation = Quaternion.Euler(0f, 0f, cardRotation);
+
+        Debug.Log("Une carte du dessus du deck a rejoint la pile de vie.");
+
+        return true;
+    }
+
 }

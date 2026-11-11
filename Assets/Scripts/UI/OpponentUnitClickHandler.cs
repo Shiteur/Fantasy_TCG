@@ -26,6 +26,12 @@ public class OpponentUnitClickHandler : MonoBehaviour, IPointerClickHandler
             return;
         }
 
+        if (gameManager != null && gameManager.IsWaitingForHealTarget())
+        {
+            gameManager.SelectHealTarget(unitState);
+            return;
+        }
+
         if (gameManager != null && gameManager.IsWaitingForEffectTarget())
         {
             gameManager.SelectEffectTarget(unitState);

@@ -116,6 +116,31 @@ public class UnitCardState : MonoBehaviour
         trashManager = manager;
     }
 
+    public void Heal(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        if (currentHealth <= 0)
+            return;
+
+        int previousHealth = currentHealth;
+
+        currentHealth = Mathf.Min(MaxHealth, currentHealth + amount);
+
+        int healedAmount = currentHealth - previousHealth;
+
+        if (healedAmount <= 0)
+        {
+            Debug.Log($"{gameObject.name} a déjà tous ses points de vie.");
+            return;
+        }
+
+        GetComponent<CardView>()?.UpdateHealthText(currentHealth, MaxHealth);
+
+        Debug.Log($"{gameObject.name} récupère {healedAmount} PV. PV actuels : {currentHealth}/{MaxHealth}");
+    }
+
     public void TakeDamage(int damage)
     {
         if(damage <= 0)
@@ -135,7 +160,7 @@ public class UnitCardState : MonoBehaviour
 
             if(trashManager != null && card != null)
             {
-                gameManager?.ResolveCardEffectsOnDeath(GetComponent<CardView>().Data);
+                gameManager?.ResolveCardEffectsOnDeath(card.Data, this);
 
                 trashManager.AddCard(card);
             }

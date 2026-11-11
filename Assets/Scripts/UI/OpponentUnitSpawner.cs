@@ -46,16 +46,17 @@ public class OpponentUnitSpawner : MonoBehaviour
             state = unit.gameObject.AddComponent<UnitCardState>();
         }
 
-        if(unit.GetComponent<OpponentUnitClickHandler>() == null)
+        OpponentUnitClickHandler clickHandler = unit.GetComponent<OpponentUnitClickHandler>();
+
+        if (clickHandler == null)
         {
-            unit.gameObject.AddComponent<OpponentUnitClickHandler>();
-
-            OpponentUnitClickHandler clickHandler =unit.GetComponent<OpponentUnitClickHandler>();
-
-            clickHandler.SetGameManager(gameManager);
+            clickHandler = unit.gameObject.AddComponent<OpponentUnitClickHandler>();
         }
 
+        clickHandler.SetGameManager(gameManager);
+
         state.SetTrashManager(trashManager);
+        state.SetGameManager(gameManager);
         state.Initialize(0);
 
         LastSpawnedUnit = state;

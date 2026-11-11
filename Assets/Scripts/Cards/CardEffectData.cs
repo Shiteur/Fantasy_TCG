@@ -7,4 +7,5 @@ public class CardEffectData
     public CardEffectType effectType;
 
     [Min(1)]public int value = 1;
+    [Min(0)]public int conditionValue = 0;
 }

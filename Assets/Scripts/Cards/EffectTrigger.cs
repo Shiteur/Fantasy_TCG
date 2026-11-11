@@ -12,5 +12,13 @@ public enum CardEffectType
 {
     DrawCard,
     DamageEnemyUnit,
-    DamageTargetEnemyUnit
+    DamageTargetEnemyUnit,
+    HealFriendlyUnit,
+    GainLife,
+    LoseLife,
+    RemoveOpponentLife,
+    IncreaseFriendlyChampionAttack,
+    DecreaseFriendlyChampionAttack,
+    IncreaseEnemyChampionAttack,
+    DecreaseEnemyChampionAttack
 }

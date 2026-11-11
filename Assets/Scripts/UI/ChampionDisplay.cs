@@ -9,6 +9,14 @@ public class ChampionDisplay : MonoBehaviour
 
     private CardView championView;
 
+    public int CurrentAttack { get; private set; }
+
+    public void ModifyAttack(int amount)
+    {
+        CurrentAttack += amount;
+        Debug.Log($"Attaque du champion : {CurrentAttack}");
+    }
+
     public void ShowChampion() {
         if (championData == null) {
             Debug.LogError("Aucun champion assigné !");
@@ -33,6 +41,7 @@ public class ChampionDisplay : MonoBehaviour
 
         championView = Instantiate(cardPrefab, championZone);
         championView.SetCardData(championData);
+        CurrentAttack = championData.attack;
     }
 
 }
