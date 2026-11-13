@@ -30,6 +30,11 @@ public class UnitSlectionManager : MonoBehaviour
             return;
         }
 
+        if(CombatManager.Instance != null)
+        {
+            CombatManager.Instance.ClearPlayerChampionSelection();
+        }
+
         if(SelectedUnit != null) SelectedUnit.GetComponent<CardView>()?.SetSelected(false);
 
         SelectedUnit = unit;

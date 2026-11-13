@@ -9,6 +9,10 @@ public class ChampionDisplay : MonoBehaviour
 
     private CardView championView;
 
+    private UnitCardState championState;
+    public UnitCardState ChampionState => championState;
+    public CardView ChampionView => championView;
+
     public int CurrentAttack { get; private set; }
 
     public void ModifyAttack(int amount)
@@ -41,7 +45,21 @@ public class ChampionDisplay : MonoBehaviour
 
         championView = Instantiate(cardPrefab, championZone);
         championView.SetCardData(championData);
+
+        if (championView.GetComponent<ChampionClickHandler>() == null)
+        {
+            championView.gameObject.AddComponent<ChampionClickHandler>();
+        }
+
         CurrentAttack = championData.attack;
+        championState = championView.GetComponent<UnitCardState>();
+
+        if (championState == null)
+        {
+            championState = championView.gameObject.AddComponent<UnitCardState>();
+        }
+
+        championState.Initialize(0);
     }
 
 }

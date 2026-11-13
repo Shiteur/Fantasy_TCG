@@ -560,6 +560,22 @@ public class GameManager : MonoBehaviour
             case CardEffectType.HealFriendlyUnit:
                 BeginTargetedHealEffect(data, effect.value, sourceUnit);
                 break;
+            case CardEffectType.IncreaseFriendlyChampionAttack:
+                championDisplay.ModifyAttack(effect.value);
+                Debug.Log($"L'attaque de ton champion a augmentée de {effect.value}");
+                break;
+            case CardEffectType.DecreaseFriendlyChampionAttack:
+                championDisplay.ModifyAttack(-effect.value);
+                Debug.Log($"L'attaque de ton champion a diminuée de {effect.value}");
+                break;
+            case CardEffectType.IncreaseEnemyChampionAttack:
+                opponentChampionDisplay.ModifyAttack(effect.value);
+                Debug.Log($"L'attaque du Champion adverse a augmentée de {effect.value}.");
+                break;
+            case CardEffectType.DecreaseEnemyChampionAttack:
+                opponentChampionDisplay.ModifyAttack(-effect.value);
+                Debug.Log($"L'attaque du Champion adverse a diminuée de {effect.value}.");
+                break;
             case CardEffectType.GainLife:
                 for (int i = 0; i < effect.value; i++)
                 {
@@ -694,6 +710,14 @@ public class GameManager : MonoBehaviour
     }
     private void ReadyAllUnit()
     {
+        // Remettre le champion du joueur en Ready.
+        if (championDisplay != null && championDisplay.ChampionState != null)
+        {
+            championDisplay.ChampionState.Ready();
+            Debug.Log("Champion du joueur remis en Ready.");
+        }
+
+        // Remettre les unités du joueur en Ready.
         if (playerUnitZone == null) return;
 
         foreach (Transform unitTransform in playerUnitZone)

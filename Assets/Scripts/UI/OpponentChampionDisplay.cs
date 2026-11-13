@@ -9,6 +9,9 @@ public class OpponentChampionDisplay : MonoBehaviour
 
     private CardView championView;
 
+    private UnitCardState championState;
+    public UnitCardState ChampionState => championState;
+
     public CardData ChampionData => championData;
     public CardView ChampionView => championView;
 
@@ -49,6 +52,15 @@ public class OpponentChampionDisplay : MonoBehaviour
         championView = Instantiate(cardPrefab, championZone);
         championView.SetCardData(championData);
         CurrentAttack = championData.attack;
+
+        championState = championView.GetComponent<UnitCardState>();
+
+        if (championState == null)
+        {
+            championState = championView.gameObject.AddComponent<UnitCardState>();
+        }
+
+        championState.Initialize(0);
 
         if (championView.GetComponent<OpponentChampionClickHandler>() == null)
         {

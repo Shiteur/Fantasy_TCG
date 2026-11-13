@@ -1629,6 +1629,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OpponentTurnManager
   gameManager: {fileID: 426734002}
   opponentUnitSpawner: {fileID: 2101762362}
+  opponentChampionDisplay: {fileID: 253087353}
   combatManager: {fileID: 565861996}
   playerUnitZone: {fileID: 1723437430}
   delayBeforeAttack: 1
@@ -2226,7 +2227,7 @@ MonoBehaviour:
   championData: {fileID: 11400000, guid: abf18efa67936514a9a4ef9b34daa227, type: 2}
   playerDeck: {fileID: 738087858}
   playerHand: {fileID: 346737966}
-  revealRecoveredCard: 1
+  revealRecoveredCard: 0
   cardPrefab: {fileID: 665403114645450997, guid: f28bd9f3f8565164094711f5038f67e3, type: 3}
   lifeZone: {fileID: 570545303}
   cardRotation: 180
@@ -2423,6 +2424,7 @@ MonoBehaviour:
   gameManager: {fileID: 426734002}
   unitSlectionManager: {fileID: 1246183059}
   playerLifeManagerForBlocker: {fileID: 556338939}
+  championDisplay: {fileID: 14539728}
   opponentChampionDisplay: {fileID: 253087353}
   opponentLifeManager: {fileID: 537454246}
   opponentUnitSpawner: {fileID: 2101762362}

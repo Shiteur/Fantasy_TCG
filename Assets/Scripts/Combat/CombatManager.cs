@@ -5,12 +5,14 @@ public class CombatManager : MonoBehaviour
     [SerializeField] private GameManager gameManager;
     [SerializeField] private UnitSlectionManager unitSlectionManager;
     [SerializeField] private LifeZoneManager playerLifeManagerForBlocker;
+    [SerializeField] private ChampionDisplay championDisplay;
 
     [SerializeField] private OpponentChampionDisplay opponentChampionDisplay;
     [SerializeField] private LifeZoneManager opponentLifeManager;
     [SerializeField] private OpponentUnitSpawner opponentUnitSpawner;
 
     private bool opponentChampionSelected;
+    private bool playerChampionSelected;
 
     // Gestion de l'interception
     private bool waitingForBlocker;
@@ -21,6 +23,8 @@ public class CombatManager : MonoBehaviour
     public static CombatManager Instance { get; private set; }
 
     public UnitCardState SelectedTarget { get; private set; }
+
+    private bool IsPlayerChampionSelected => playerChampionSelected;
 
     private void Awake()
     {
@@ -51,7 +55,6 @@ public class CombatManager : MonoBehaviour
         opponentChampionSelected = true;
         Debug.Log("Champion adverse sélectionné comme cible !");
     }
-
     private void ClearOpponentChampionSelection()
     {
         if (opponentChampionDisplay != null && opponentChampionDisplay.ChampionView != null)
@@ -60,6 +63,38 @@ public class CombatManager : MonoBehaviour
         }
 
         opponentChampionSelected = false;
+    }
+
+    public void SelectPlayerChampion()
+    {
+        if (playerChampionSelected)
+        {
+            ClearPlayerChampionSelection();
+            return;
+        }
+
+        if (unitSlectionManager != null)
+        {
+            unitSlectionManager.ClearSelection();
+        }
+
+        if (championDisplay != null && championDisplay.ChampionView != null)
+        {
+            championDisplay.ChampionView.SetSelected(true);
+        }
+
+        playerChampionSelected = true;
+        Debug.Log("Ton champion est sélectionné comme attaquant !");
+    }
+
+    public void ClearPlayerChampionSelection()
+    {
+        if (championDisplay != null && championDisplay.ChampionView != null)
+        {
+            championDisplay.ChampionView.SetSelected(false);
+        }
+
+        playerChampionSelected = false;
     }
 
     public void SelectTarget(UnitCardState target)
@@ -139,6 +174,7 @@ public class CombatManager : MonoBehaviour
     public void ClearCombatSelections()
     {
         ClearTargetSelection();
+        ClearPlayerChampionSelection();
         ClearOpponentChampionSelection();
 
         if (unitSlectionManager != null)
@@ -182,11 +218,20 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
-        UnitCardState attacker = unitSlectionManager.SelectedUnit;
+        UnitCardState attacker = null;
 
-        if(attacker == null)
+        if (IsPlayerChampionSelected)
         {
-            Debug.LogWarning("Aucune unité sélectionnée pour attaquer.");
+            attacker = championDisplay != null ? championDisplay.ChampionState : null;
+        }
+        else if (unitSlectionManager != null)
+        {
+            attacker = unitSlectionManager.SelectedUnit;
+        }
+
+        if (attacker == null)
+        {
+            Debug.LogWarning("Aucun attaquant sélectionné.");
             return;
         }
 
@@ -202,13 +247,25 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
-        if(!attacker.CanAttackOnTurn(gameManager.TurnNumber))
+        if (IsPlayerChampionSelected)
         {
-            Debug.Log("Cette unité ne peut pas attaquer ce tour.");
-            return;
+            if (attacker.IsExhausted)
+            {
+                Debug.Log("Ton champion est épuisé, il ne peut donc pas attaquer.");
+                return;
+            }
+        }
+        else
+        {
+            if (!attacker.CanAttackOnTurn(gameManager.TurnNumber))
+            {
+                Debug.Log("Cette unité ne peut pas attaquer ce tour.");
+                return;
+            }
         }
 
         CardView attackerView = attacker.GetComponent<CardView>();
+        int attackerAttack = IsPlayerChampionSelected ? championDisplay.CurrentAttack : attackerView.Data.attack;
 
         if (attackerView == null || attackerView.Data == null)
         {
@@ -219,33 +276,42 @@ public class CombatManager : MonoBehaviour
         // Cas 1: Attaque du champion adverse
         if (opponentChampionSelected)
         {
-            if(opponentLifeManager == null)
+            if(opponentLifeManager == null || opponentChampionDisplay == null)
             {
                 Debug.LogError("LifeZoneManager adverse non assigné !");
                 return;
             }
 
-            if (opponentLifeManager.RemainingLives <= 0)
+            int damageC = attackerAttack - opponentChampionDisplay.CurrentAttack;
+
+            if (damageC > 0)
             {
-                attacker.Exhaust();
-                ClearCombatSelections();
-                Debug.Log("Victoire ! Le Champion adverse n'a plus de cartes de vie.");
-                return;
+                if (opponentLifeManager.RemainingLives > 0)
+                {
+                    bool lifeTaken = opponentLifeManager.TakeLifeDamage();
+
+                    if (!lifeTaken)
+                    {
+                        Debug.LogWarning("Impossible de retirer la carte de vie adverse.");
+                        return;
+                    }
+
+                    Debug.Log("Attaque directe réussie : une carte de vie adverse rejoint sa main.");
+                }
+                else
+                {
+                    Debug.Log("Victoire ! Le Champion adverse n'a plus de cartes de vie.");
+                }
             }
-
-            bool lifeTaken = opponentLifeManager.TakeLifeDamage();
-
-            if (!lifeTaken)
+            else
             {
-                Debug.LogWarning("Impossible de retirer la carte de vie adverse.");
-                return;
+                Debug.Log($"Attaque trop faible: Aucune carte de vie retirée.");
             }
 
             attacker.Exhaust();
             ClearCombatSelections();
-
-            Debug.Log("Attaque directe réussie : une carte de vie adverse rejoint sa main.");
             return;
+
         }
 
         // Cas 2: Attaque d'une unité adverse sélectionnée
@@ -270,7 +336,7 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
-        int damage = attackerView.Data.attack - targetView.Data.attack;
+        int damage = attackerAttack - targetView.Data.attack;
 
         if (damage <= 0)
         {
@@ -401,21 +467,40 @@ public class CombatManager : MonoBehaviour
 
         if (incomingAttackTargetsChampion)
         {
-            if (playerLifeManagerForBlocker == null)
+            if (playerLifeManagerForBlocker == null || championDisplay == null)
             {
                 Debug.LogError("La zone de vie du joueur n'est pas assignée.");
                 ResetIncomingAttack();
                 return;
             }
 
-            if (playerLifeManagerForBlocker.RemainingLives <= 0)
+            CardView attackerView = incomingAttacker.GetComponent<CardView>();
+
+            if (attackerView == null || attackerView.Data == null)
             {
-                Debug.Log("Défaite : ton Champion n'a plus de cartes de vie.");
+                Debug.LogError("Données de l'attaquant adverse manquantes.");
+                ResetIncomingAttack();
+                return;
+            }
+            int attackerAttack = incomingAttacker == opponentChampionDisplay?.ChampionState ? opponentChampionDisplay.CurrentAttack : attackerView.Data.attack;
+
+            int damage = attackerAttack - championDisplay.CurrentAttack;
+
+            if (damage > 0)
+            {
+                if (playerLifeManagerForBlocker.RemainingLives > 0)
+                {
+                    playerLifeManagerForBlocker.TakeLifeDamage();
+                    Debug.Log($"Ton Champion est dépassé de {damage} points. Une carte de vie est retirée.");
+                }
+                else
+                {
+                    Debug.Log("Défaite : ton Champion n'a plus de cartes de vie.");
+                }
             }
             else
             {
-                playerLifeManagerForBlocker.TakeLifeDamage();
-                Debug.Log("Attaque adverse : une carte de vie est perdue.");
+                Debug.Log($"Ton Champion résiste à l'attaque. Différence : {damage}. Aucune carte de vie perdue.");
             }
         }
         else
@@ -430,15 +515,15 @@ public class CombatManager : MonoBehaviour
             CardView attackerView = incomingAttacker.GetComponent<CardView>();
             CardView targetView = incomingTarget.GetComponent<CardView>();
 
-            if (attackerView == null || attackerView.Data == null ||
-                targetView == null || targetView.Data == null)
+            if (attackerView == null || attackerView.Data == null || targetView == null || targetView.Data == null)
             {
                 Debug.LogError("Données de combat manquantes.");
                 ResetIncomingAttack();
                 return;
             }
 
-            int damage = attackerView.Data.attack - targetView.Data.attack;
+            int attackerAttack = incomingAttacker == opponentChampionDisplay?.ChampionState ? opponentChampionDisplay.CurrentAttack : attackerView.Data.attack;
+            int damage = attackerAttack - targetView.Data.attack;
 
             if (damage > 0)
                 incomingTarget.TakeDamage(damage);

@@ -7,6 +7,7 @@ public class OpponentTurnManager : MonoBehaviour
     [Header("Références")]
     [SerializeField] private GameManager gameManager;
     [SerializeField] private OpponentUnitSpawner opponentUnitSpawner;
+    [SerializeField] private OpponentChampionDisplay opponentChampionDisplay;
     [SerializeField] private CombatManager combatManager;
     [SerializeField] private Transform playerUnitZone;
 
@@ -28,6 +29,13 @@ public class OpponentTurnManager : MonoBehaviour
             return;
 
         opponentUnitSpawner.ReadyAllOpponentUnits();
+
+        if (opponentChampionDisplay != null && opponentChampionDisplay.ChampionState != null)
+        {
+            opponentChampionDisplay.ChampionState.Ready();
+            opponentChampionDisplay.ChampionView.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
+            Debug.Log("Champion adverse remis en Ready.");
+        }
 
         if (opponentTurnCoroutine != null)
             StopCoroutine(opponentTurnCoroutine);
@@ -75,12 +83,44 @@ public class OpponentTurnManager : MonoBehaviour
             yield return new WaitForSeconds(delayBetweenAttacks);
         }
 
+        TryOpponentChampionAttack();
+        while (combatManager.IsWaitingForBlocker())
+            yield return null;
+        yield return new WaitForSeconds(delayBetweenAttacks);
+
         if (gameManager != null && gameManager.CurrentTurnOwner == TurnOwner.Opponent)
         {
             gameManager.EndOpponentTurn();
         }
 
         opponentTurnCoroutine = null;
+    }
+
+    private void TryOpponentChampionAttack()
+    {
+        if (opponentChampionDisplay == null || opponentChampionDisplay.ChampionState == null)
+        {
+            Debug.LogWarning("Champion adverse introuvable.");
+            return;
+        }
+
+        UnitCardState champion = opponentChampionDisplay.ChampionState;
+
+        if (champion.IsExhausted)
+            return;
+
+        UnitCardState target = FindExhaustedPlayerUnit();
+
+        if (target != null)
+        {
+            Debug.Log("Le champion adverse attaque une unité épuisée.");
+            combatManager.StartTestOpponentAttack(champion, target, false);
+        }
+        else
+        {
+            Debug.Log("Le champion adverse attaque ton champion.");
+            combatManager.StartTestOpponentAttack(champion, null, true);
+        }
     }
 
     private UnitCardState FindExhaustedPlayerUnit()
