@@ -265,13 +265,13 @@ public class CombatManager : MonoBehaviour
         }
 
         CardView attackerView = attacker.GetComponent<CardView>();
-        int attackerAttack = IsPlayerChampionSelected ? championDisplay.CurrentAttack : attackerView.Data.attack;
 
         if (attackerView == null || attackerView.Data == null)
         {
             Debug.LogError("Les données de l'attaquant ou de la cible sont manquantes.");
             return;
         }
+        int attackerAttack = IsPlayerChampionSelected ? championDisplay.CurrentAttack : attacker.CurrentAttack;
 
         // Cas 1: Attaque du champion adverse
         if (opponentChampionSelected)
@@ -336,7 +336,8 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
-        int damage = attackerAttack - targetView.Data.attack;
+        int targetAttack = SelectedTarget.CurrentAttack;
+        int damage = attackerAttack - targetAttack;
 
         if (damage <= 0)
         {
@@ -428,7 +429,8 @@ public class CombatManager : MonoBehaviour
                 return;
             }
 
-            int damage = attackerView.Data.attack - targetView.Data.attack;
+            int attackerAttack = incomingAttacker == opponentChampionDisplay?.ChampionState ? opponentChampionDisplay.CurrentAttack : incomingAttacker.CurrentAttack;
+            int damage = attackerAttack - target.CurrentAttack;
 
             if (damage > 0)
                 target.TakeDamage(damage);
@@ -482,7 +484,7 @@ public class CombatManager : MonoBehaviour
                 ResetIncomingAttack();
                 return;
             }
-            int attackerAttack = incomingAttacker == opponentChampionDisplay?.ChampionState ? opponentChampionDisplay.CurrentAttack : attackerView.Data.attack;
+            int attackerAttack = incomingAttacker == opponentChampionDisplay?.ChampionState ? opponentChampionDisplay.CurrentAttack : incomingAttacker.CurrentAttack;
 
             int damage = attackerAttack - championDisplay.CurrentAttack;
 
@@ -522,8 +524,8 @@ public class CombatManager : MonoBehaviour
                 return;
             }
 
-            int attackerAttack = incomingAttacker == opponentChampionDisplay?.ChampionState ? opponentChampionDisplay.CurrentAttack : attackerView.Data.attack;
-            int damage = attackerAttack - targetView.Data.attack;
+            int attackerAttack = incomingAttacker == opponentChampionDisplay?.ChampionState ? opponentChampionDisplay.CurrentAttack : incomingAttacker.CurrentAttack;
+            int damage = attackerAttack - incomingTarget.CurrentAttack;
 
             if (damage > 0)
                 incomingTarget.TakeDamage(damage);

@@ -24,7 +24,8 @@ MonoBehaviour:
   initialLifeCard: 0
   abilities: 
   effects:
-  - trigger: 1
-    effectType: 0
+  - trigger: 0
+    effectType: 22
     value: 1
+    conditionValue: 0
   description: 

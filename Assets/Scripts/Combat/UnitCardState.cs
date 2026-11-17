@@ -9,6 +9,8 @@ public class UnitCardState : MonoBehaviour
     [SerializeField] private GameManager gameManager;
 
     public int MaxHealth { get; private set; }
+    public int CurrentAttack { get; private set; }
+    public int CurrentManaCost { get; private set; }
 
     private Quaternion baseRotation;
 
@@ -100,8 +102,12 @@ public class UnitCardState : MonoBehaviour
         if(cardView != null && cardView.Data != null)
         {
             MaxHealth = cardView.Data.maxHealth;
+            CurrentAttack = cardView.Data.attack;
+            cardView.UpdateAttackText(CurrentAttack);
             currentHealth = MaxHealth;
             GetComponent<CardView>()?.UpdateHealthText(currentHealth, MaxHealth);
+            CurrentManaCost = cardView.Data.manaCost;
+            cardView.UpdateManaCostText(CurrentManaCost);
         }
         else
         {
@@ -110,12 +116,53 @@ public class UnitCardState : MonoBehaviour
 
         UpdateVisual();
     }
+    public void ModifyAttack(int amount)
+    {
+        CurrentAttack += amount;
 
+        GetComponent<CardView>()?.UpdateAttackText(CurrentAttack);
+
+        Debug.Log($"Attaque de {gameObject.name} : {CurrentAttack}");
+    }
+    public void ResetAttack()
+    {
+        CardView cardView = GetComponent<CardView>();
+
+        if (cardView == null || cardView.Data == null)
+            return;
+
+        CurrentAttack = cardView.Data.attack;
+        cardView.UpdateAttackText(CurrentAttack);
+
+        Debug.Log($"Attaque de {gameObject.name} réinitialisée : {CurrentAttack}");
+    }
+    public void IncreaseTemporaryManaCost(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        CurrentManaCost += amount;
+
+        GetComponent<CardView>()?.UpdateManaCostText(CurrentManaCost);
+
+        Debug.Log($"Coût en mana de {gameObject.name} augmenté à {CurrentManaCost}.");
+    }
+    public void ResetManaCost()
+    {
+        CardView cardView = GetComponent<CardView>();
+
+        if (cardView == null || cardView.Data == null)
+            return;
+
+        CurrentManaCost = cardView.Data.manaCost;
+        cardView.UpdateManaCostText(CurrentManaCost);
+
+        Debug.Log($"Coût en mana de {gameObject.name} réinitialisé à {CurrentManaCost}.");
+    }
     public void SetTrashManager(TrashManager manager)
     {
         trashManager = manager;
     }
-
     public void Heal(int amount)
     {
         if (amount <= 0)

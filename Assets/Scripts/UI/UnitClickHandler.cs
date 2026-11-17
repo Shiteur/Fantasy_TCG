@@ -25,6 +25,12 @@ public class UnitClickHandler : MonoBehaviour, IPointerClickHandler
             gameManager.SelectHealTarget(unitState);
             return;
         }
+    
+        if (gameManager != null && gameManager.IsWaitingForAttackTarget())
+        {
+            gameManager.SelectAttackTarget(unitState);
+            return;
+        }
 
         if (CombatManager.Instance != null && CombatManager.Instance.IsWaitingForBlocker())
         {

@@ -20,9 +20,22 @@ public class OpponentChampionDisplay : MonoBehaviour
     public void ModifyAttack(int amount)
     {
         CurrentAttack += amount;
+        if (championView != null)
+        {
+            championView.UpdateAttackText(CurrentAttack);
+        }
         Debug.Log($"Attaque du champion adverse : {CurrentAttack}");
     }
+    public void ResetAttack()
+    {
+        if (championView == null || championView.Data == null)
+            return;
 
+        CurrentAttack = championView.Data.attack;
+        championView.UpdateAttackText(CurrentAttack);
+
+        Debug.Log($"Attaque du champion adverse réinitialisée : {CurrentAttack}");
+    }
     public void ShowChampion()
     {
         if (championData == null)

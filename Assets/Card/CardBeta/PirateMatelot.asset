@@ -25,7 +25,7 @@ MonoBehaviour:
   abilities: 
   effects:
   - trigger: 0
-    effectType: 4
+    effectType: 17
     value: 2
     conditionValue: 0
   description: 

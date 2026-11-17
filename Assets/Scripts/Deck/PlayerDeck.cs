@@ -40,6 +40,19 @@ public class PlayerDeck: MonoBehaviour
         Debug.Log("Deck mélangé.");
     }
 
+    public void AddCardToTop(CardData cardData)
+    {
+        if (cardData == null)
+        {
+            Debug.LogError("Impossible d'ajouter une carte vide au deck.");
+            return;
+        }
+
+        drawStack.Add(cardData);
+
+        Debug.Log($"Carte placée au-dessus du deck : {cardData.cardName}");
+    }
+
     public CardData DrawCard() { 
         if(drawStack.Count == 0)
         {

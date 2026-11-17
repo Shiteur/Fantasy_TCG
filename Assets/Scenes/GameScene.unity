@@ -1612,6 +1612,7 @@ MonoBehaviour:
   playerLifeManager: {fileID: 556338939}
   opponentLifeManager: {fileID: 537454246}
   cancelEffectButton: {fileID: 146349937}
+  trashViewer: {fileID: 542876493}
   playerGoesFirst: 1
   startingHandSize: 5
   combatManager: {fileID: 565861996}

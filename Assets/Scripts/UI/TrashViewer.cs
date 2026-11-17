@@ -11,6 +11,8 @@ public class TrashViewer : MonoBehaviour
     [Header("Cartes")]
     [SerializeField] private CardView cardPrefab;
 
+    public event System.Action<CardData> OnCardSelected;
+
     public void OpenTrash(TrashManager source, string title)
     {
         if (source == null || trashPanel == null ||
@@ -41,6 +43,7 @@ public class TrashViewer : MonoBehaviour
             copy.SetFaceDown(false);
             copy.transform.localScale = Vector3.one;
             copy.transform.localRotation = Quaternion.identity;
+            copy.Clicked += selectedCard => {OnCardSelected?.Invoke(selectedCard.Data);};
         }
 
         trashPanel.SetActive(true);

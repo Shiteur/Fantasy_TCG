@@ -38,6 +38,12 @@ public class OpponentUnitClickHandler : MonoBehaviour, IPointerClickHandler
             return;
         }
 
+        if (gameManager != null && gameManager.IsWaitingForAttackTarget())
+        {
+            gameManager.SelectAttackTarget(unitState);
+            return;
+        }
+
         if (CombatManager.Instance == null)
         {
             Debug.LogWarning("CombatManager instance is null.");

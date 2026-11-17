@@ -86,7 +86,6 @@ public class ManaSystem : MonoBehaviour
             view.SetCardData(cardToAdd);
 
             ManaCardState state = view.gameObject.AddComponent<ManaCardState>();
-
             manaOnBoard.Add(state);
         }
 
@@ -114,6 +113,98 @@ public class ManaSystem : MonoBehaviour
             if (remaining == 0) break;
         }
         return remaining == 0; // pas censé etre faux, mais on retourne false si jamais il y a un bug
+    }
+
+    public bool ReturnManaCardToDeck(ManaCardState mana)
+    {
+        if (mana == null || !manaOnBoard.Contains(mana))
+            return false;
+
+        CardView cardView = mana.GetComponent<CardView>();
+
+        if (cardView == null || cardView.Data == null)
+        {
+            Debug.LogError("Impossible de récupérer les données de la carte mana.");
+            return false;
+        }
+
+        CardData cardData = cardView.Data;
+
+        manaOnBoard.Remove(mana);
+        manaDrawStack.Insert(0, cardData);
+
+        Destroy(mana.gameObject);
+
+        Debug.Log("Carte mana renvoyée sous le Mana Deck.");
+
+        return true;
+    }
+
+    public bool ReadyManaCard(ManaCardState mana)
+    {
+        if (mana == null || !manaOnBoard.Contains(mana))
+            return false;
+
+        if (!mana.IsExhaused)
+        {
+            Debug.LogWarning("Cette carte mana est déjà redressée.");
+            return false;
+        }
+
+        mana.Ready();
+
+        Debug.Log("Carte mana redressée.");
+        return true;
+    }
+    public int ReturnManaCardsToDeck(int amount)
+    {
+        if (amount <= 0)
+            return 0;
+
+        int returned = 0;
+
+        while (returned < amount && manaOnBoard.Count > 0)
+        {
+            ManaCardState mana = manaOnBoard[0];
+
+            if (ReturnManaCardToDeck(mana))
+            {
+                returned++;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        Debug.Log($"{returned} carte(s) mana renvoyée(s) automatiquement sous le Mana Deck.");
+
+        return returned;
+    }
+    public int ReadyManaCards(int amount)
+    {
+        if (amount <= 0)
+            return 0;
+
+        int readied = 0;
+
+        foreach (ManaCardState mana in manaOnBoard)
+        {
+            if (mana == null || !mana.IsExhaused)
+                continue;
+
+            if (ReadyManaCard(mana))
+            {
+                readied++;
+
+                if (readied >= amount)
+                    break;
+            }
+        }
+
+        Debug.Log($"{readied} carte(s) mana redressée(s) automatiquement.");
+
+        return readied;
     }
 
     public void ReadyAllMana()

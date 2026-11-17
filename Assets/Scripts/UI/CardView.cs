@@ -73,6 +73,21 @@ public class CardView : MonoBehaviour, IPointerClickHandler
         }
     }
 
+    public void UpdateAttackText(int currentAttack)
+    {
+        if (attackText != null)
+        {
+            attackText.text = currentAttack.ToString();
+        }
+    }
+    public void UpdateManaCostText(int currentManaCost)
+    {
+        if (costText != null)
+        {
+            costText.text = currentManaCost.ToString();
+        }
+    }
+
     public void SetFaceDown(bool faceDawn)
     {
         if(cardBackOverlay != null)

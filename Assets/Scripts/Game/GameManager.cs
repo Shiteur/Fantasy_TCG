@@ -19,6 +19,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private LifeZoneManager playerLifeManager;
     [SerializeField] private LifeZoneManager opponentLifeManager;
     [SerializeField] private GameObject cancelEffectButton;
+    [SerializeField] private TrashViewer trashViewer;
 
     [Header("Configuration de la partie")]
     [SerializeField] private bool playerGoesFirst = true;
@@ -35,6 +36,22 @@ public class GameManager : MonoBehaviour
     private int pendingHealAmount;
     private CardData pendingHealCard;
     private UnitCardState pendingHealSource;
+    // Variable pour gérer les modif d'attaque
+    private bool waitingForAttackTarget;
+    private bool attackTargetsOpponent;
+    private int pendingAttackAmount;
+    // Variable pour gérer les effets de redressement et d'épuisement
+    private bool pendingReadyEffect;
+    private bool pendingExhaustEffect;
+    // Variable pour gérer les effets de coût en mana
+    private bool pendingManaCostEffect;
+    // Variable pour gérer les effets de KO par coût en mana
+    private bool pendingKnockOutEffect;
+    private int pendingKnockOutManaThreshold;
+    // Variables pour les effets de récupération depuis la Trash
+    private bool waitingForTrashCard;
+    private bool recoverTrashCardToHand;
+    private bool recoverTrashCardToDeck;
 
     // Queue pour gérer les effets en attente
     private Queue<System.Action> pendingEffects = new Queue<System.Action>();
@@ -140,7 +157,6 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("Le tour adverse doit maintenant se terminer automatiquement.");
         }
     }
-
     public void EndOpponentTurn()
     {
         if (!gameStarted)
@@ -153,6 +169,7 @@ public class GameManager : MonoBehaviour
         }
 
         CurrentTurnOwner = TurnOwner.Player;
+        championDisplay.ResetAttack();
         turnNumber++;
 
         RefreshMana();
@@ -170,7 +187,6 @@ public class GameManager : MonoBehaviour
         waitingToCompletePlayerTurnStart = false;
         CompletePlayerTurnStart();
     }
-
     public void DrawCard() {
         CardData drawnCard = playerDeck.DrawCard();
 
@@ -180,7 +196,6 @@ public class GameManager : MonoBehaviour
             playerDeck.CountCards();
         }
     }
-
     public void PlaySelectedUnit()
     {
         if (!gameStarted)
@@ -263,17 +278,13 @@ public class GameManager : MonoBehaviour
         Debug.Log($"{data.cardName} a été jouée !");
         ResolveCardEffects(data, EffectTrigger.OnPlay, uniteState);
     }
-
-
     public void AddOneMana()
     {
         manaSystem.AddManaCards(1);
     }
-
     public void RefreshMana() { 
         manaSystem.ReadyAllMana();
     }
-
     public void ExhaustOneMana()
     {
         bool success = manaSystem.ExhaustMana(1);
@@ -298,6 +309,71 @@ public class GameManager : MonoBehaviour
     public void ResolveTurnEffects(EffectTrigger trigger)
     {
         ResolveTurnEffectsForZone(playerUnitZone, trigger);
+    }
+    public bool IsWaitingForAttackTarget()
+    {
+        return waitingForAttackTarget;
+    }
+    public void SelectAttackTarget(UnitCardState target)
+    {
+        if (!waitingForAttackTarget || target == null)
+            return;
+
+        bool targetIsOpponent = target.transform.IsChildOf(opponentUnitZone);
+
+        if (targetIsOpponent != attackTargetsOpponent)
+        {
+            Debug.LogWarning("Choisis une unité de la bonne équipe.");
+            return;
+        }
+
+        if (pendingReadyEffect)
+        {
+            target.Ready();
+            Debug.Log("L'unité alliée ciblée a été redressée.");
+        }
+        else if (pendingExhaustEffect)
+        {
+            target.Exhaust();
+            Debug.Log("L'unité adverse ciblée a été épuisée.");
+        }
+        else if (pendingManaCostEffect)
+        {
+            target.IncreaseTemporaryManaCost(pendingAttackAmount);
+            Debug.Log("Le coût en mana de l'unité alliée a été augmenté.");
+        }
+        else if (pendingKnockOutEffect)
+        {
+            if (target.CurrentManaCost >= pendingKnockOutManaThreshold)
+            {
+                Debug.LogWarning(
+                    $"Cette unité coûte {target.CurrentManaCost} mana. " +
+                    $"Son coût doit être strictement inférieur à {pendingKnockOutManaThreshold}."
+                );
+                return;
+            }
+
+            target.TakeDamage(target.MaxHealth);
+            Debug.Log("L'unité adverse a été mise KO par un effet.");
+        }
+        else
+        {
+            target.ModifyAttack(pendingAttackAmount);
+            Debug.Log("L'attaque de l'unité ciblée a été modifiée.");
+        }
+
+        waitingForAttackTarget = false;
+        pendingAttackAmount = 0;
+        pendingReadyEffect = false;
+        pendingExhaustEffect = false;
+        pendingManaCostEffect = false;
+        pendingKnockOutEffect = false;
+        pendingKnockOutManaThreshold = 0;
+
+        cancelEffectButton?.SetActive(false);
+
+        ProcessNextPendingEffect();
+        CheckPendingPlayerTurnCompletion();
     }
     public void SelectHealTarget(UnitCardState target)
     {
@@ -375,6 +451,18 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        if (waitingForAttackTarget)
+        {
+            CancelPendingBoostAttack();
+            return;
+        }
+
+        if (waitingForTrashCard)
+        {
+            CancelPendingTrashRecovery();
+            return;
+        }
+
         Debug.Log("Aucun effet ne peut être annulé actuellement.");
     }
     private void EnqueueEffect(System.Action effectAction)
@@ -408,7 +496,8 @@ public class GameManager : MonoBehaviour
         waitingToFinishPlayerTurn = false;
 
         CurrentTurnOwner = TurnOwner.Opponent;
-        
+        opponentChampionDisplay.ResetAttack();
+
         if (combatManager != null)
         {
             combatManager.ClearCombatSelections();
@@ -452,7 +541,6 @@ public class GameManager : MonoBehaviour
             $"Choisis une unité adverse pour l'effet de {data.cardName}."
         );
     }
-
     private void BeginTargetedHealEffect(CardData data, int healAmount, UnitCardState sourceUnit)
     {
         if (sourceUnit == null)
@@ -496,7 +584,101 @@ public class GameManager : MonoBehaviour
 
         Debug.Log($"Choisis une unité alliée à soigner avec l'effet de {data.cardName}.");
     }
+    private void BeginTargetedAttackEffect(CardData data, int amount, bool targetOpponent)
+    {
+        waitingForAttackTarget = true;
+        attackTargetsOpponent = targetOpponent;
+        pendingAttackAmount = amount;
 
+        cancelEffectButton?.SetActive(true);
+
+        string team = targetOpponent ? "adverse" : "alliée";
+
+        Debug.Log($"Choisis une unité {team} pour modifier son attaque de {amount}.");
+    }
+    private void BeginTargetedReadyEffect(CardData data)
+    {
+        pendingReadyEffect = true;
+        pendingExhaustEffect = false;
+        waitingForAttackTarget = true;
+        attackTargetsOpponent = false;
+        pendingAttackAmount = 0;
+
+        cancelEffectButton?.SetActive(true);
+
+        Debug.Log($"Choisis une unité alliée à redresser grâce à {data.cardName}.");
+    }
+    private void BeginTargetedExhaustEffect(CardData data)
+    {
+        pendingReadyEffect = false;
+        pendingExhaustEffect = true;
+        waitingForAttackTarget = true;
+        attackTargetsOpponent = true;
+        pendingAttackAmount = 0;
+
+        cancelEffectButton?.SetActive(true);
+
+        Debug.Log($"Choisis une unité adverse à épuiser grâce à {data.cardName}.");
+    }
+    private void BeginTargetedManaCostEffect(CardData data, int amount)
+    {
+        pendingManaCostEffect = true;
+        pendingReadyEffect = false;
+        pendingExhaustEffect = false;
+        waitingForAttackTarget = true;
+        attackTargetsOpponent = false;
+        pendingAttackAmount = amount;
+
+        cancelEffectButton?.SetActive(true);
+
+        Debug.Log($"Choisis une unité alliée pour modifier son coût en mana de {amount} grâce à {data.cardName}.");
+
+    }
+    private void BeginTargetedKnockOutEffect(CardData data, int manaThreshold)
+    {
+        pendingKnockOutEffect = true;
+        pendingKnockOutManaThreshold = manaThreshold;
+
+        pendingReadyEffect = false;
+        pendingExhaustEffect = false;
+        pendingManaCostEffect = false;
+
+        waitingForAttackTarget = true;
+        attackTargetsOpponent = true;
+        pendingAttackAmount = 0;
+
+        cancelEffectButton?.SetActive(true);
+        Debug.Log($"Choisis une unité adverse dont le coût en mana est strictement inférieur à {manaThreshold} pour la mettre KO grâce à {data.cardName}.");
+    }
+    private void BeginTrashRecoveryEffect(CardData data, bool toHand)
+    {
+        if (playerTrashManager == null)
+        {
+            Debug.LogError("GameManager : PlayerTrashManager n'est pas assigné.");
+            return;
+        }
+
+        if (playerTrashManager.CardCount == 0)
+        {
+            Debug.Log("La Trash est vide : impossible de récupérer une carte.");
+            return;
+        }
+
+        waitingForTrashCard = true;
+        recoverTrashCardToHand = toHand;
+        recoverTrashCardToDeck = !toHand;
+
+        trashViewer.OnCardSelected -= OnTrashCardSelected;
+        trashViewer.OnCardSelected += OnTrashCardSelected;
+
+        string destination = toHand ? "ta main" : "le dessus de ton deck";
+
+        trashViewer.OpenTrash(playerTrashManager, "Choisis une carte pour " + destination);
+
+        cancelEffectButton?.SetActive(true);
+
+        Debug.Log($"{data.cardName} : choisis une carte dans ta Trash pour la récupérer vers {destination}.");
+    }
     private void ResolveCardEffects(CardData data, EffectTrigger trigger, UnitCardState sourceUnit = null)
     {
         if(data == null || data.effects == null)
@@ -514,21 +696,154 @@ public class GameManager : MonoBehaviour
             switch (effect.effectType)
             {
                 case CardEffectType.DrawCard:
-                    for(int i=0; i< effect.value; i++)
+                    for (int i = 0; i < effect.value; i++)
                     {
                         DrawCard();
                     }
                     Debug.Log($"{data.cardName} déclenche un effet : pioche de {effect.value} carte(s)");
                     break;
+
+                case CardEffectType.AddManaCardsFromDeck:
+                    if (manaSystem == null)
+                    {
+                        Debug.LogError("ManaSystem n'est pas assigné dans GameManager.");
+                        break;
+                    }
+                    manaSystem.AddManaCards(effect.value);
+                    Debug.Log($"{data.cardName} ajoute {effect.value} carte(s) mana depuis le Mana Deck.");
+                    break;
+
+                case CardEffectType.ReadyManaCards:
+                    if (manaSystem == null)
+                    {
+                        Debug.LogError("ManaSystem n'est pas assigné dans GameManager.");
+                        break;
+                    }
+
+                    manaSystem.ReadyManaCards(effect.value);
+                    break;
+
+                case CardEffectType.ReturnManaCardsToDeck:
+                    if (manaSystem == null)
+                    {
+                        Debug.LogError("ManaSystem n'est pas assigné dans GameManager.");
+                        break;
+                    }
+
+                    manaSystem.ReturnManaCardsToDeck(effect.value);
+                    break;
+
                 case CardEffectType.DamageEnemyUnit:
                     DamageFirstEnemyUnit(effect.value);
                     break;
+
                 case CardEffectType.DamageTargetEnemyUnit:
                     BeginTargetedDamageEffect(data, effect.value);
                     break;
+
                 case CardEffectType.HealFriendlyUnit:
                     BeginTargetedHealEffect(data, effect.value, sourceUnit);
                     break;
+
+                case CardEffectType.IncreaseFriendlyChampionAttack:
+                    championDisplay.ModifyAttack(effect.value);
+                    Debug.Log($"L'attaque de ton champion a augmentée de {effect.value}");
+                    break;
+
+                case CardEffectType.DecreaseFriendlyChampionAttack:
+                    championDisplay.ModifyAttack(-effect.value);
+                    Debug.Log($"L'attaque de ton champion a diminuée de {effect.value}");
+                    break;
+
+                case CardEffectType.IncreaseEnemyChampionAttack:
+                    opponentChampionDisplay.ModifyAttack(effect.value);
+                    Debug.Log($"L'attaque du Champion adverse a augmentée de {effect.value}.");
+                    break;
+
+                case CardEffectType.DecreaseEnemyChampionAttack:
+                    opponentChampionDisplay.ModifyAttack(-effect.value);
+                    Debug.Log($"L'attaque du Champion adverse a diminuée de {effect.value}.");
+                    break;
+
+                case CardEffectType.IncreaseFriendlyUnitAttack:
+                    BeginTargetedAttackEffect(data, effect.value, false);
+                    break;
+
+                case CardEffectType.DecreaseFriendlyUnitAttack:
+                    BeginTargetedAttackEffect(data, -effect.value, false);
+                    break;
+
+                case CardEffectType.IncreaseEnemyUnitAttack:
+                    BeginTargetedAttackEffect(data, effect.value, true);
+                    break;
+
+                case CardEffectType.DecreaseEnemyUnitAttack:
+                    BeginTargetedAttackEffect(data, -effect.value, true);
+                    break;
+
+                case CardEffectType.ReadyFriendlyUnit:
+                    BeginTargetedReadyEffect(data);
+                    break;
+
+                case CardEffectType.ExhaustEnemyUnit:
+                    BeginTargetedExhaustEffect(data);
+                    break;
+
+                case CardEffectType.IncreaseFriendlyUnitManaCost:
+                    BeginTargetedManaCostEffect(data, effect.value);
+                    break;
+
+                case CardEffectType.KnockOutEnemyUnitByManaCost:
+                    BeginTargetedKnockOutEffect(data, effect.conditionValue);
+                    break;
+
+                case CardEffectType.RecoverCardFromTrashToHand:
+                    BeginTrashRecoveryEffect(data, true);
+                    break;
+
+                case CardEffectType.RecoverCardFromTrashToDeck:
+                    BeginTrashRecoveryEffect(data, false);
+                    break;
+
+                case CardEffectType.GainLife:
+                    for (int i = 0; i < effect.value; i++)
+                    {
+                        if (!playerLifeManager.AddLifeCard())
+                            break;
+                    }
+                    Debug.Log($"{data.cardName} déclenche un effet : gain de {effect.value} carte(s) vie.");
+                    break;
+
+                case CardEffectType.LoseLife:
+                    for (int i = 0; i < effect.value; i++)
+                    {
+                        if (!playerLifeManager.TakeLifeDamage())
+                            break;
+                    }
+
+                    Debug.Log($"{data.cardName} déclenche un effet : perte de {effect.value} carte(s) vie.");
+                    break;
+
+                case CardEffectType.RemoveOpponentLife:
+                    if (opponentLifeManager == null)
+                    {
+                        Debug.LogError("GameManager : la pile de vie adverse est manquante !");
+                        break;
+                    }
+                    if (opponentLifeManager.RemainingLives <= effect.conditionValue)
+                    {
+                        Debug.Log("L'adversaire n'a pas assez de cartes vie : effet annulé.");
+                        break;
+                    }
+                    for (int i = 0; i < effect.value; i++)
+                    {
+                        if (opponentLifeManager.RemainingLives <= effect.conditionValue)
+                            break;
+                        opponentLifeManager.TakeLifeDamage();
+                    }
+                    Debug.Log($"{data.cardName} retire jusqu'à {effect.value} carte(s) vie à l'adversaire.");
+                    break;
+
                 default:
                     break;
             }
@@ -549,6 +864,36 @@ public class GameManager : MonoBehaviour
                 Debug.Log($"{data.cardName} déclenche un effet : pioche de {effect.value} carte(s)");
                 break;
 
+            case CardEffectType.AddManaCardsFromDeck:
+                if (manaSystem == null)
+                {
+                    Debug.LogError("ManaSystem n'est pas assigné dans GameManager.");
+                    break;
+                }
+                manaSystem.AddManaCards(effect.value);
+                Debug.Log($"{data.cardName} ajoute {effect.value} carte(s) mana depuis le Mana Deck.");
+                break;
+
+            case CardEffectType.ReadyManaCards:
+                if (manaSystem == null)
+                {
+                    Debug.LogError("ManaSystem n'est pas assigné dans GameManager.");
+                    break;
+                }
+
+                manaSystem.ReadyManaCards(effect.value);
+                break;
+
+            case CardEffectType.ReturnManaCardsToDeck:
+                if (manaSystem == null)
+                {
+                    Debug.LogError("ManaSystem n'est pas assigné dans GameManager.");
+                    break;
+                }
+
+                manaSystem.ReturnManaCardsToDeck(effect.value);
+                break;
+
             case CardEffectType.DamageEnemyUnit:
                 DamageFirstEnemyUnit(effect.value);
                 break;
@@ -560,22 +905,67 @@ public class GameManager : MonoBehaviour
             case CardEffectType.HealFriendlyUnit:
                 BeginTargetedHealEffect(data, effect.value, sourceUnit);
                 break;
+
             case CardEffectType.IncreaseFriendlyChampionAttack:
                 championDisplay.ModifyAttack(effect.value);
                 Debug.Log($"L'attaque de ton champion a augmentée de {effect.value}");
                 break;
+
             case CardEffectType.DecreaseFriendlyChampionAttack:
                 championDisplay.ModifyAttack(-effect.value);
                 Debug.Log($"L'attaque de ton champion a diminuée de {effect.value}");
                 break;
+
             case CardEffectType.IncreaseEnemyChampionAttack:
                 opponentChampionDisplay.ModifyAttack(effect.value);
                 Debug.Log($"L'attaque du Champion adverse a augmentée de {effect.value}.");
                 break;
+
             case CardEffectType.DecreaseEnemyChampionAttack:
                 opponentChampionDisplay.ModifyAttack(-effect.value);
                 Debug.Log($"L'attaque du Champion adverse a diminuée de {effect.value}.");
                 break;
+
+            case CardEffectType.IncreaseFriendlyUnitAttack:
+                BeginTargetedAttackEffect(data, effect.value, false);
+                break;
+
+            case CardEffectType.DecreaseFriendlyUnitAttack:
+                BeginTargetedAttackEffect(data, -effect.value, false);
+                break;
+
+            case CardEffectType.IncreaseEnemyUnitAttack:
+                BeginTargetedAttackEffect(data, effect.value, true);
+                break;
+
+            case CardEffectType.DecreaseEnemyUnitAttack:
+                BeginTargetedAttackEffect(data, -effect.value, true);
+                break;
+
+            case CardEffectType.ReadyFriendlyUnit:
+                BeginTargetedReadyEffect(data);
+                break;
+
+            case CardEffectType.ExhaustEnemyUnit:
+                BeginTargetedExhaustEffect(data);
+                break;
+
+            case CardEffectType.IncreaseFriendlyUnitManaCost:
+                BeginTargetedManaCostEffect(data, effect.value);
+                break;
+
+            case CardEffectType.KnockOutEnemyUnitByManaCost:
+                BeginTargetedKnockOutEffect(data, effect.conditionValue);
+                break;
+
+            case CardEffectType.RecoverCardFromTrashToHand:
+                BeginTrashRecoveryEffect(data, true);
+                break;
+
+            case CardEffectType.RecoverCardFromTrashToDeck:
+                BeginTrashRecoveryEffect(data, false);
+                break;
+
             case CardEffectType.GainLife:
                 for (int i = 0; i < effect.value; i++)
                 {
@@ -584,6 +974,7 @@ public class GameManager : MonoBehaviour
                 }
                 Debug.Log($"{data.cardName} déclenche un effet : gain de {effect.value} carte(s) vie.");
                 break;
+
             case CardEffectType.LoseLife:
                 for (int i = 0; i < effect.value; i++)
                 {
@@ -593,6 +984,7 @@ public class GameManager : MonoBehaviour
 
                 Debug.Log($"{data.cardName} déclenche un effet : perte de {effect.value} carte(s) vie.");
                 break;
+
             case CardEffectType.RemoveOpponentLife:
                 if (opponentLifeManager == null)
                 {
@@ -612,6 +1004,7 @@ public class GameManager : MonoBehaviour
                 }
                 Debug.Log($"{data.cardName} retire jusqu'à {effect.value} carte(s) vie à l'adversaire.");
                 break;
+
             default:
                 break;
         }
@@ -667,6 +1060,39 @@ public class GameManager : MonoBehaviour
         }
         ProcessNextPendingEffect();
     }
+    private void OnTrashCardSelected(CardData cardData)
+    {
+        if (!waitingForTrashCard || cardData == null)
+            return;
+
+        bool success = false;
+
+        if (recoverTrashCardToHand)
+        {
+            success = playerTrashManager.RecoverCardToHand(cardData, playerHand);
+        }
+        else if (recoverTrashCardToDeck)
+        {
+            success = playerTrashManager.RecoverCardToDeck(cardData, playerDeck);
+        }
+
+        if (!success)
+        {
+            Debug.LogWarning("Impossible de récupérer cette carte depuis la Trash.");
+            return;
+        }
+
+        waitingForTrashCard = false;
+        recoverTrashCardToHand = false;
+        recoverTrashCardToDeck = false;
+
+        trashViewer.OnCardSelected -= OnTrashCardSelected;
+        trashViewer.CloseTrash();
+        cancelEffectButton?.SetActive(false);
+
+        ProcessNextPendingEffect();
+        CheckPendingPlayerTurnCompletion();
+    }
     private void CancelPendingEffect()
     {
         if (!waitingForEffectTarget)
@@ -681,7 +1107,6 @@ public class GameManager : MonoBehaviour
 
         Debug.Log("L'effet ciblé a été annulé : aucune cible sélectionnée.");
     }
-
     private void CancelPendingHeal()
     {
         if (!waitingForHealTarget)
@@ -696,6 +1121,44 @@ public class GameManager : MonoBehaviour
         CheckPendingPlayerTurnCompletion();
 
         Debug.Log("L'effet de soin a été annulé.");
+    }
+    private void CancelPendingBoostAttack()
+    {
+        if (!waitingForAttackTarget)
+            return;
+
+        waitingForAttackTarget = false;
+        pendingAttackAmount = 0;
+        pendingReadyEffect = false;
+        pendingExhaustEffect = false;
+        pendingManaCostEffect = false;
+        pendingKnockOutEffect = false;
+        pendingKnockOutManaThreshold = 0;
+
+        cancelEffectButton?.SetActive(false);
+
+        ProcessNextPendingEffect();
+        CheckPendingPlayerTurnCompletion();
+        Debug.Log("Sélection de la cible pour la modification d'etat annulée.");
+    }
+    private void CancelPendingTrashRecovery()
+    {
+        if (!waitingForTrashCard)
+            return;
+
+        waitingForTrashCard = false;
+        recoverTrashCardToHand = false;
+        recoverTrashCardToDeck = false;
+
+        trashViewer.OnCardSelected -= OnTrashCardSelected;
+        trashViewer.CloseTrash();
+
+        cancelEffectButton?.SetActive(false);
+
+        ProcessNextPendingEffect();
+        CheckPendingPlayerTurnCompletion();
+
+        Debug.Log("Récupération depuis la Trash annulée.");
     }
     private void CompletePlayerTurnStart()
     {
@@ -718,17 +1181,21 @@ public class GameManager : MonoBehaviour
         }
 
         // Remettre les unités du joueur en Ready.
-        if (playerUnitZone == null) return;
-
-        foreach (Transform unitTransform in playerUnitZone)
+        if (playerUnitZone != null)
         {
-            UnitCardState unitState = unitTransform.GetComponent<UnitCardState>();
-            if (unitState != null)
+            foreach (Transform unitTransform in playerUnitZone)
             {
-                unitState.Ready();
-                Debug.Log($"Unité peut attaquer: {unitState.CanAttackOnTurn(turnNumber)}.");
-            }
+                UnitCardState unitState = unitTransform.GetComponent<UnitCardState>();
 
+                if (unitState != null)
+                {
+                    unitState.Ready();
+                    unitState.ResetAttack();
+                    unitState.ResetManaCost();
+
+                    Debug.Log($"Unité prête : attaque réinitialisée à {unitState.CurrentAttack}.");
+                }
+            }
         }
     }
 

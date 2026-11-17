@@ -66,6 +66,74 @@ public class TrashManager : MonoBehaviour
         Debug.Log("Carte envoyée dans la Trash : " + card.Data.cardName);
     }
 
+    public CardView RemoveCard(CardData data)
+    {
+        if (data == null || trashZone == null)
+            return null;
+
+        foreach (Transform child in trashZone)
+        {
+            CardView card = child.GetComponent<CardView>();
+
+            if (card != null && card.Data == data)
+            {
+                TrashCardClickForwarder forwarder =
+                    card.GetComponent<TrashCardClickForwarder>();
+
+                if (forwarder != null)
+                    Destroy(forwarder);
+
+                card.transform.SetParent(null);
+
+                return card;
+            }
+        }
+
+        return null;
+    }
+
+    public bool RecoverCardToHand(CardData data, PlayerHand playerHand)
+    {
+        if (playerHand == null)
+        {
+            Debug.LogError("TrashManager : PlayerHand n'est pas assigné.");
+            return false;
+        }
+
+        CardView card = RemoveCard(data);
+
+        if (card == null)
+            return false;
+
+        Destroy(card.gameObject);
+        playerHand.AddCard(data);
+
+        Debug.Log($"Carte récupérée depuis la Trash vers la main : {data.cardName}");
+
+        return true;
+    }
+
+    public bool RecoverCardToDeck(CardData data, PlayerDeck playerDeck)
+    {
+        if (playerDeck == null)
+        {
+            Debug.LogError("TrashManager : PlayerDeck n'est pas assigné.");
+            return false;
+        }
+
+        CardView card = RemoveCard(data);
+
+        if (card == null)
+            return false;
+
+        playerDeck.AddCardToTop(data);
+        Destroy(card.gameObject);
+
+        Debug.Log($"Carte récupérée depuis la Trash vers le dessus du deck : {data.cardName}");
+
+        return true;
+    }
+
     public List<CardData> GetCardData()
     {
         List<CardData> result = new List<CardData>();

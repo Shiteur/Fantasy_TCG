@@ -20,5 +20,18 @@ public enum CardEffectType
     IncreaseFriendlyChampionAttack,
     DecreaseFriendlyChampionAttack,
     IncreaseEnemyChampionAttack,
-    DecreaseEnemyChampionAttack
+    DecreaseEnemyChampionAttack,
+    IncreaseFriendlyUnitAttack,
+    DecreaseFriendlyUnitAttack,
+    IncreaseEnemyUnitAttack,
+    DecreaseEnemyUnitAttack,
+    ReadyFriendlyUnit,
+    ExhaustEnemyUnit,
+    ReadyManaCards,
+    ReturnManaCardsToDeck,
+    AddManaCardsFromDeck,
+    IncreaseFriendlyUnitManaCost,
+    KnockOutEnemyUnitByManaCost,
+    RecoverCardFromTrashToHand,
+    RecoverCardFromTrashToDeck
 }
