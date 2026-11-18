@@ -79,6 +79,7 @@ public class OpponentUnitSpawner : MonoBehaviour
             if (state != null)
             {
                 state.Ready();
+                state.ResetOncePerTurnEffects();
                 state.ResetAttack();
                 state.ResetManaCost();
                 Debug.Log($"Attaque de l'unité adverse réinitialisée : {state.CurrentAttack}");

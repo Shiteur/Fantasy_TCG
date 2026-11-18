@@ -8,6 +8,13 @@ public enum EffectTrigger
     Counter     //Pendant une attaque de l'adversaire
 }
 
+public enum ActivationCostType
+{
+    None,
+    ExhaustCard,
+    SpendMana
+}
+
 public enum CardEffectType
 {
     DrawCard,

@@ -24,8 +24,10 @@ MonoBehaviour:
   initialLifeCard: 0
   abilities: 
   effects:
-  - trigger: 0
-    effectType: 19
-    value: 5
+  - trigger: 2
+    effectType: 0
+    value: 1
     conditionValue: 0
+    activationCost: 1
+    activationManaCost: 0
   description: 

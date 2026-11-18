@@ -33,6 +33,7 @@ public class OpponentTurnManager : MonoBehaviour
         if (opponentChampionDisplay != null && opponentChampionDisplay.ChampionState != null)
         {
             opponentChampionDisplay.ChampionState.Ready();
+            opponentChampionDisplay.ChampionState.ResetOncePerTurnEffects();
             opponentChampionDisplay.ChampionView.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
             Debug.Log("Champion adverse remis en Ready.");
         }

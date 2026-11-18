@@ -19,6 +19,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private LifeZoneManager playerLifeManager;
     [SerializeField] private LifeZoneManager opponentLifeManager;
     [SerializeField] private GameObject cancelEffectButton;
+    [SerializeField] private GameObject activateEffectButton;
     [SerializeField] private TrashViewer trashViewer;
 
     [Header("Configuration de la partie")]
@@ -53,6 +54,11 @@ public class GameManager : MonoBehaviour
     private bool recoverTrashCardToHand;
     private bool recoverTrashCardToDeck;
 
+    // Variable pour gérer les effets "une fois par tour"
+    private UnitCardState pendingOncePerTurnSource;
+    private bool resolvingOncePerTurnEffect;
+    private int pendingOncePerTurnEffectIndex = -1;
+
     // Queue pour gérer les effets en attente
     private Queue<System.Action> pendingEffects = new Queue<System.Action>();
     private bool resolvingEffectQueue;
@@ -66,6 +72,8 @@ public class GameManager : MonoBehaviour
     public TurnOwner CurrentTurnOwner { get; private set; } = TurnOwner.Player;
     public bool IsPlayerTurn => CurrentTurnOwner == TurnOwner.Player;
     public bool IsResolvingPlayerTurnStart => waitingToCompletePlayerTurnStart;
+
+    public bool IsResolvingOncePerTurnEffect => resolvingOncePerTurnEffect;
 
     public int TurnNumber => turnNumber;
     public bool CanAttack => turnNumber > 1;
@@ -133,7 +141,13 @@ public class GameManager : MonoBehaviour
     public void EndTurn() {
         if(!gameStarted) return;
 
-        if(CurrentTurnOwner == TurnOwner.Player)
+        if (resolvingOncePerTurnEffect)
+        {
+            Debug.Log("Impossible de terminer le tour pendant l'activation d'un effet.");
+            return;
+        }
+
+        if (CurrentTurnOwner == TurnOwner.Player)
         {
             if (waitingToFinishPlayerTurn)
                 return;
@@ -294,6 +308,57 @@ public class GameManager : MonoBehaviour
             Debug.LogWarning("Pas assez de mana disponible !");
         }
     }
+    public void ActivateSelectedOncePerTurnEffect()
+    {
+        if (resolvingOncePerTurnEffect)
+            return;
+
+        UnitCardState source = GetSelectedOncePerTurnSource();
+
+        if (!CanActivateOncePerTurn(source))
+        {
+            Debug.Log("Aucun effet OncePerTurn disponible pour cette carte.");
+            return;
+        }
+
+        CardView cardView = source.GetComponent<CardView>();
+
+        for (int i = 0; i < cardView.Data.effects.Length; i++)
+        {
+            CardEffectData effect = cardView.Data.effects[i];
+
+            if (effect != null && effect.trigger == EffectTrigger.OncePerTurn)
+            {
+                pendingOncePerTurnEffectIndex = i;
+                break;
+            }
+        }
+
+        pendingOncePerTurnSource = source;
+        resolvingOncePerTurnEffect = true;
+
+        UpdateActivateEffectButton();
+
+        ResolveCardEffects(cardView.Data,EffectTrigger.OncePerTurn,source);
+
+        if (!waitingForEffectTarget && !waitingForHealTarget && !waitingForAttackTarget && !waitingForTrashCard)
+        {
+            CompleteOncePerTurnActivation();
+        }
+
+        Debug.Log("Activation de l'effet OncePerTurn en cours.");
+    }
+    public void UpdateActivateEffectButton()
+    {
+        UnitCardState source = GetSelectedOncePerTurnSource();
+
+        bool canActivate = !resolvingOncePerTurnEffect && CanActivateOncePerTurn(source);
+
+        if (activateEffectButton != null)
+        {
+            activateEffectButton.SetActive(canActivate);
+        }
+    }
     public bool IsWaitingForEffectTarget()
     {
         return waitingForEffectTarget;
@@ -302,6 +367,10 @@ public class GameManager : MonoBehaviour
     {
         return waitingForHealTarget;
     }
+    public bool IsWaitingForAttackTarget()
+    {
+        return waitingForAttackTarget;
+    }
     public void ResolveCardEffectsOnDeath(CardData data, UnitCardState unit)
     {
         ResolveCardEffects(data, EffectTrigger.OnDeath, unit);
@@ -309,10 +378,6 @@ public class GameManager : MonoBehaviour
     public void ResolveTurnEffects(EffectTrigger trigger)
     {
         ResolveTurnEffectsForZone(playerUnitZone, trigger);
-    }
-    public bool IsWaitingForAttackTarget()
-    {
-        return waitingForAttackTarget;
     }
     public void SelectAttackTarget(UnitCardState target)
     {
@@ -370,6 +435,8 @@ public class GameManager : MonoBehaviour
         pendingKnockOutEffect = false;
         pendingKnockOutManaThreshold = 0;
 
+        CompleteOncePerTurnActivation();
+
         cancelEffectButton?.SetActive(false);
 
         ProcessNextPendingEffect();
@@ -404,6 +471,7 @@ public class GameManager : MonoBehaviour
         cancelEffectButton?.SetActive(false);
 
         target.Heal(pendingHealAmount);
+        //CompleteOncePerTurnActivation();
 
         Debug.Log($"Effet de soin de {pendingHealCard.cardName} : {pendingHealAmount} PV sur {target.name}.");
 
@@ -442,24 +510,28 @@ public class GameManager : MonoBehaviour
         if (waitingForEffectTarget)
         {
             CancelPendingEffect();
+            CancelOncePerTurnActivation();
             return;
         }
 
         if (waitingForHealTarget)
         {
             CancelPendingHeal();
+            CancelOncePerTurnActivation();
             return;
         }
 
         if (waitingForAttackTarget)
         {
             CancelPendingBoostAttack();
+            CancelOncePerTurnActivation();
             return;
         }
 
         if (waitingForTrashCard)
         {
             CancelPendingTrashRecovery();
+            CancelOncePerTurnActivation();
             return;
         }
 
@@ -1082,6 +1154,8 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        CompleteOncePerTurnActivation();
+
         waitingForTrashCard = false;
         recoverTrashCardToHand = false;
         recoverTrashCardToDeck = false;
@@ -1160,6 +1234,18 @@ public class GameManager : MonoBehaviour
 
         Debug.Log("Récupération depuis la Trash annulée.");
     }
+    private void CancelOncePerTurnActivation()
+    {
+        if (!resolvingOncePerTurnEffect)
+            return;
+
+        resolvingOncePerTurnEffect = false;
+        pendingOncePerTurnSource = null;
+
+        UpdateActivateEffectButton();
+
+        Debug.Log("Activation OncePerTurn annulée : aucun coût payé.");
+    }
     private void CompletePlayerTurnStart()
     {
         DrawCard();
@@ -1177,6 +1263,7 @@ public class GameManager : MonoBehaviour
         if (championDisplay != null && championDisplay.ChampionState != null)
         {
             championDisplay.ChampionState.Ready();
+            championDisplay.ChampionState.ResetOncePerTurnEffects();
             Debug.Log("Champion du joueur remis en Ready.");
         }
 
@@ -1190,6 +1277,7 @@ public class GameManager : MonoBehaviour
                 if (unitState != null)
                 {
                     unitState.Ready();
+                    unitState.ResetOncePerTurnEffects();
                     unitState.ResetAttack();
                     unitState.ResetManaCost();
 
@@ -1197,6 +1285,124 @@ public class GameManager : MonoBehaviour
                 }
             }
         }
+
+        UpdateActivateEffectButton();
     }
+    private void CompleteOncePerTurnActivation()
+    {
+        if (!resolvingOncePerTurnEffect || pendingOncePerTurnSource == null)
+            return;
+
+        CardView cardView = pendingOncePerTurnSource.GetComponent<CardView>();
+
+        if (cardView == null || cardView.Data == null)
+            return;
+
+        if (cardView.Data.effects == null || pendingOncePerTurnEffectIndex < 0 || pendingOncePerTurnEffectIndex >= cardView.Data.effects.Length)
+        {
+            Debug.LogError("Index de l'effet OncePerTurn invalide.");
+            return;
+        }
+
+        CardEffectData effect = cardView.Data.effects[pendingOncePerTurnEffectIndex];
+
+        if (effect == null)
+            return;
+
+        if (effect.activationCost == ActivationCostType.ExhaustCard)
+        {
+            pendingOncePerTurnSource.Exhaust();
+        }
+        else if (effect.activationCost == ActivationCostType.SpendMana)
+        {
+            if (manaSystem == null || !manaSystem.ExhaustMana(effect.activationManaCost))
+            {
+                Debug.LogError("Impossible de payer le coût en mana de l'effet OncePerTurn.");
+
+                resolvingOncePerTurnEffect = false;
+                pendingOncePerTurnSource = null;
+                pendingOncePerTurnEffectIndex = -1;
+
+                return;
+            }
+        }
+
+        pendingOncePerTurnSource.MarkEffectAsUsed(pendingOncePerTurnEffectIndex);
+
+        resolvingOncePerTurnEffect = false;
+        pendingOncePerTurnSource = null;
+        pendingOncePerTurnEffectIndex = -1;
+        UpdateActivateEffectButton();
+
+        Debug.Log("Effet OncePerTurn terminé et marqué comme utilisé.");
+    }
+    private bool CanActivateOncePerTurn(UnitCardState source)
+    {
+        if (source == null)
+            return false;
+
+        CardView cardView = source.GetComponent<CardView>();
+
+        if (cardView == null || cardView.Data == null || cardView.Data.effects == null)
+            return false;
+
+        for (int i = 0; i < cardView.Data.effects.Length; i++)
+        {
+            CardEffectData effect = cardView.Data.effects[i];
+
+            if (effect == null || effect.trigger != EffectTrigger.OncePerTurn)
+                continue;
+
+            if (source.HasUsedEffectThisTurn(i))
+                return false;
+
+            if (effect.activationCost == ActivationCostType.ExhaustCard && source.IsExhausted)
+                return false;
+
+            if (effect.activationCost == ActivationCostType.SpendMana)
+            {
+                if (manaSystem == null || manaSystem.AvailableMana < effect.activationManaCost)
+                    return false;
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+    private UnitCardState GetSelectedOncePerTurnSource()
+    {
+        if (combatManager != null && combatManager.PlayerChampionSelected)
+        {
+            return championDisplay != null
+                ? championDisplay.ChampionState
+                : null;
+        }
+
+        if (UnitSlectionManager.Instance != null)
+        {
+            return UnitSlectionManager.Instance.SelectedUnit;
+        }
+
+        return null;
+    }
+    /*private CardEffectData GetOncePerTurnEffect(UnitCardState source)
+    {
+        if (source == null)
+            return null;
+
+        CardView cardView = source.GetComponent<CardView>();
+
+        if (cardView == null || cardView.Data == null || cardView.Data.effects == null)
+            return null;
+
+        foreach (CardEffectData effect in cardView.Data.effects)
+        {
+            if (effect != null && effect.trigger == EffectTrigger.OncePerTurn)
+                return effect;
+        }
+
+        return null;
+    }*/
 
 }

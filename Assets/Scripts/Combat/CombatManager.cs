@@ -14,6 +14,8 @@ public class CombatManager : MonoBehaviour
     private bool opponentChampionSelected;
     private bool playerChampionSelected;
 
+    public bool PlayerChampionSelected => playerChampionSelected;
+
     // Gestion de l'interception
     private bool waitingForBlocker;
     private UnitCardState incomingAttacker;
@@ -24,7 +26,7 @@ public class CombatManager : MonoBehaviour
 
     public UnitCardState SelectedTarget { get; private set; }
 
-    private bool IsPlayerChampionSelected => playerChampionSelected;
+    public bool IsPlayerChampionSelected => playerChampionSelected;
 
     private void Awake()
     {
@@ -67,6 +69,12 @@ public class CombatManager : MonoBehaviour
 
     public void SelectPlayerChampion()
     {
+        if (gameManager != null && gameManager.IsResolvingOncePerTurnEffect)
+        {
+            Debug.Log("Impossible de changer de sélection pendant l'activation d'un effet.");
+            return;
+        }
+
         if (playerChampionSelected)
         {
             ClearPlayerChampionSelection();
@@ -84,6 +92,7 @@ public class CombatManager : MonoBehaviour
         }
 
         playerChampionSelected = true;
+        gameManager?.UpdateActivateEffectButton();
         Debug.Log("Ton champion est sélectionné comme attaquant !");
     }
 
@@ -95,6 +104,7 @@ public class CombatManager : MonoBehaviour
         }
 
         playerChampionSelected = false;
+        gameManager?.UpdateActivateEffectButton();
     }
 
     public void SelectTarget(UnitCardState target)
@@ -244,6 +254,12 @@ public class CombatManager : MonoBehaviour
         if (gameManager.IsResolvingPlayerTurnStart)
         {
             Debug.Log("Impossible d'attaquer pendant la résolution des effets de début de tour.");
+            return;
+        }
+
+        if (gameManager.IsResolvingOncePerTurnEffect)
+        {
+            Debug.Log("Impossible d'attaquer pendant l'activation d'un effet.");
             return;
         }
 

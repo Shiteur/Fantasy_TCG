@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class UnitCardState : MonoBehaviour
 {
@@ -13,6 +14,8 @@ public class UnitCardState : MonoBehaviour
     public int CurrentManaCost { get; private set; }
 
     private Quaternion baseRotation;
+
+    private HashSet<int> usedOncePerTurnEffects = new HashSet<int>();
 
     public bool IsExhausted => isExhausted;
     public int SummonedOnTurn => summonedOnTurn;
@@ -159,6 +162,18 @@ public class UnitCardState : MonoBehaviour
 
         Debug.Log($"Coût en mana de {gameObject.name} réinitialisé à {CurrentManaCost}.");
     }
+    public bool HasUsedEffectThisTurn(int effectIndex)
+    {
+        return usedOncePerTurnEffects.Contains(effectIndex);
+    }
+    public void MarkEffectAsUsed(int effectIndex)
+    {
+        usedOncePerTurnEffects.Add(effectIndex);
+    }
+    public void ResetOncePerTurnEffects()
+    {
+        usedOncePerTurnEffects.Clear();
+    }
     public void SetTrashManager(TrashManager manager)
     {
         trashManager = manager;
@@ -209,6 +224,13 @@ public class UnitCardState : MonoBehaviour
             {
                 gameManager?.ResolveCardEffectsOnDeath(card.Data, this);
 
+                //Reset les state de la carte par default
+                ResetAttack();
+                ResetManaCost();
+                ResetOncePerTurnEffects();
+                currentHealth = MaxHealth;
+                GetComponent<CardView>()?.UpdateHealthText(currentHealth, MaxHealth);
+                // Ajout à la Trash
                 trashManager.AddCard(card);
             }
             else

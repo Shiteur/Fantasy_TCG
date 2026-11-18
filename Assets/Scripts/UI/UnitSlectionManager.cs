@@ -2,6 +2,8 @@ using UnityEngine;
 
 public class UnitSlectionManager : MonoBehaviour
 {
+    [SerializeField] private GameManager gameManager;
+
     public static UnitSlectionManager Instance { get; private set; }
 
     public UnitCardState SelectedUnit { get; private set; }
@@ -40,6 +42,7 @@ public class UnitSlectionManager : MonoBehaviour
         SelectedUnit = unit;
 
         SelectedUnit.GetComponent<CardView>()?.SetSelected(true);
+        gameManager?.UpdateActivateEffectButton();
 
         Debug.Log($"Unité attaquante sélectionnée : {SelectedUnit.GetComponent<CardView>()?.Data.cardName}");
     }
@@ -63,5 +66,6 @@ public class UnitSlectionManager : MonoBehaviour
         }
 
         SelectedUnit = null;
+        gameManager?.UpdateActivateEffectButton();
     }
 }

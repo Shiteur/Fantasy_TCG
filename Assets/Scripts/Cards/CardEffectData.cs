@@ -8,4 +8,7 @@ public class CardEffectData
 
     [Min(1)]public int value = 1;
     [Min(0)]public int conditionValue = 0;
+
+    public ActivationCostType activationCost;
+    [Min(0)] public int activationManaCost = 0;
 }

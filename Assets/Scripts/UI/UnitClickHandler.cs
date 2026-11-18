@@ -38,6 +38,12 @@ public class UnitClickHandler : MonoBehaviour, IPointerClickHandler
             return;
         }
 
+        if (gameManager != null && gameManager.IsResolvingOncePerTurnEffect)
+        {
+            Debug.Log("Sélection libre impossible pendant l'activation d'un effet.");
+            return;
+        }
+
         if (UnitSlectionManager.Instance == null)
         {
             Debug.LogWarning("UnitSlectionManager n'est pas présent dans la scène.");
