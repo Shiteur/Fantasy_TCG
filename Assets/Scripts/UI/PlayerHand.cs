@@ -52,4 +52,22 @@ public class PlayerHand : MonoBehaviour
             SelectedCard = null;
         }
     }
+
+    public void AddExistingCard(CardView card)
+    {
+        if (card == null)
+            return;
+
+        if (cardsInGHand.Contains(card))
+            return;
+
+        card.transform.SetParent(transform, false);
+        card.SetFaceDown(false);
+        card.SetSelected(false);
+        card.Clicked += OnCardClicked;
+
+        cardsInGHand.Add(card);
+
+        Debug.Log($"Carte réintégrée dans la main : {card.Data.cardName}");
+    }
 }

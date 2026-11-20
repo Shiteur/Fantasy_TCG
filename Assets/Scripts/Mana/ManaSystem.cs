@@ -28,6 +28,21 @@ public class ManaSystem : MonoBehaviour
             return count;
         }
     }
+    public int ExhaustedManaCount
+    {
+        get
+        {
+            int count = 0;
+
+            foreach (ManaCardState mana in manaOnBoard)
+            {
+                if (mana != null && mana.IsExhaused)
+                    count++;
+            }
+
+            return count;
+        }
+    }
 
     public void Initialize()
     {
@@ -113,6 +128,25 @@ public class ManaSystem : MonoBehaviour
             if (remaining == 0) break;
         }
         return remaining == 0; // pas censé etre faux, mais on retourne false si jamais il y a un bug
+    }
+    public void RefundMana(int amount)
+    {
+        if (amount <= 0)
+            return;
+
+        int remaining = amount;
+
+        foreach (ManaCardState mana in manaOnBoard)
+        {
+            if (mana == null || !mana.IsExhaused)
+                continue;
+
+            mana.Ready();
+            remaining--;
+
+            if (remaining == 0)
+                break;
+        }
     }
 
     public bool ReturnManaCardToDeck(ManaCardState mana)

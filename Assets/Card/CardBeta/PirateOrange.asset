@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83e94f7d3af7d65459a8bfa3540c46f0, type: 3}
+  m_Name: PirateOrange
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
+  cardId: S3
+  cardName: Orange de Pirate
+  cardType: 2
+  cardColor: 1
+  hasSecondaryColor: 0
+  secondaryColor: 0
+  manaCost: 1
+  attack: 0
+  maxHealth: 0
+  initialLifeCard: 0
+  abilities: 
+  effects:
+  - trigger: 0
+    effectType: 11
+    value: 5
+    conditionValue: 0
+    activationCost: 0
+    activationManaCost: 1
+    mustResolve: 0
+  description: 

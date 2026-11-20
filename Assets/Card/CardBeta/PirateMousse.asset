@@ -30,4 +30,5 @@ MonoBehaviour:
     conditionValue: 0
     activationCost: 1
     activationManaCost: 0
+    mustResolve: 0
   description: 

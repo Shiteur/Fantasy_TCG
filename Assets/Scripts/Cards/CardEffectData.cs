@@ -11,4 +11,6 @@ public class CardEffectData
 
     public ActivationCostType activationCost;
     [Min(0)] public int activationManaCost = 0;
+
+    public bool mustResolve = true;
 }

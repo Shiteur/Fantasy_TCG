@@ -27,4 +27,8 @@ MonoBehaviour:
   - trigger: 3
     effectType: 3
     value: 2
+    conditionValue: 0
+    activationCost: 0
+    activationManaCost: 0
+    mustResolve: 0
   description: 

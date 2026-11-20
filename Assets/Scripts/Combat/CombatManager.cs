@@ -178,6 +178,7 @@ public class CombatManager : MonoBehaviour
 
         waitingForBlocker = true;
 
+        gameManager.OpenCounterWindow();
         Debug.Log("Attaque adverse déclarée : clique sur une unité avec Blocker pour intercepter.");
     }
 
@@ -384,6 +385,12 @@ public class CombatManager : MonoBehaviour
             return;
         }
 
+        if (gameManager != null && gameManager.CounterWindowActive)
+        {
+            Debug.Log("Tu dois terminer ta fenêtre Counter avant d'intercepter l'attaque.");
+            return;
+        }
+
         if (blocker == null || !blocker.CanIntercept())
         {
             Debug.Log("Cette unité ne peut pas intercepter : elle doit être dégagée et posséder Blocker.");
@@ -480,6 +487,12 @@ public class CombatManager : MonoBehaviour
         if (!waitingForBlocker)
         {
             Debug.LogWarning("Aucune attaque adverse en attente.");
+            return;
+        }
+
+        if (gameManager != null && gameManager.CounterWindowActive)
+        {
+            Debug.Log("Tu dois terminer ta fenêtre Counter avant de résoudre l'attaque.");
             return;
         }
 
