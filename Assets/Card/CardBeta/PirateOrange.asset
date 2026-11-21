@@ -25,8 +25,8 @@ MonoBehaviour:
   abilities: 
   effects:
   - trigger: 0
-    effectType: 11
-    value: 5
+    effectType: 26
+    value: 1
     conditionValue: 0
     activationCost: 0
     activationManaCost: 1

@@ -11,6 +11,8 @@ public class PlayerHand : MonoBehaviour
     public int CardCOunt => cardsInGHand.Count;
     public CardView SelectedCard { get; private set; }
 
+    public event System.Action<CardView> CardSelected;
+
     public void AddCard(CardData cardData)
     {
         if (cardData == null)
@@ -37,6 +39,7 @@ public class PlayerHand : MonoBehaviour
         SelectedCard.SetSelected(true);
 
         Debug.Log($"Carte sélectionnée: {card.Data.cardName}");
+        CardSelected?.Invoke(card);
     }
 
     public void RemoveCard(CardView card)

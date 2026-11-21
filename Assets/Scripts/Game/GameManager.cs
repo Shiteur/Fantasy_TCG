@@ -23,6 +23,7 @@ public class GameManager : MonoBehaviour
     [SerializeField] private TrashViewer trashViewer;
     [SerializeField] private Transform playerTerrainZone;
     [SerializeField] private Transform opponentTerrainZone;
+    [SerializeField] private TrashManager opponentTrashManager;
 
     [Header("Configuration de la partie")]
     [SerializeField] private bool playerGoesFirst = true;
@@ -55,6 +56,9 @@ public class GameManager : MonoBehaviour
     private bool waitingForTrashCard;
     private bool recoverTrashCardToHand;
     private bool recoverTrashCardToDeck;
+
+    //Variable pour supprimer une carde de sa main
+    private bool waitingForHandDiscard;
 
     // Variable pour gérer les effets "une fois par tour"
     private UnitCardState pendingOncePerTurnSource;
@@ -105,6 +109,9 @@ public class GameManager : MonoBehaviour
             Debug.LogError("GameManager n'est pas correctement configuré !");
             return;
         }
+
+        playerHand.CardSelected -= OnHandCardSelected;
+        playerHand.CardSelected += OnHandCardSelected;
 
         if (cancelEffectButton != null)
         {
@@ -731,6 +738,199 @@ public class GameManager : MonoBehaviour
     {
         return waitingForAttackTarget;
     }
+    public void ActivateOpponentTerrainOncePerTurn()
+    {
+        if (opponentTerrainZone == null)
+            return;
+
+        TerrainCardState terrainState =
+            opponentTerrainZone.GetComponentInChildren<TerrainCardState>();
+
+        if (terrainState == null)
+            return;
+
+        CardView cardView = terrainState.GetComponent<CardView>();
+
+        if (cardView == null || cardView.Data == null ||
+            cardView.Data.effects == null)
+            return;
+
+        for (int i = 0; i < cardView.Data.effects.Length; i++)
+        {
+            CardEffectData effect = cardView.Data.effects[i];
+
+            if (effect == null || effect.trigger != EffectTrigger.OncePerTurn)
+                continue;
+
+            if (terrainState.HasUsedEffectThisTurn(i))
+            {
+                Debug.Log("L'effet OncePerTurn du terrain adverse a déjà été utilisé.");
+                return;
+            }
+
+            if (effect.activationCost == ActivationCostType.ExhaustCard &&
+                terrainState.IsExhausted)
+            {
+                Debug.Log("Le terrain adverse est déjà épuisé.");
+                return;
+            }
+
+            if (effect.activationCost == ActivationCostType.SpendMana)
+            {
+                Debug.LogWarning(
+                    "Activation impossible : le système de mana adverse n'est pas encore disponible."
+                );
+                return;
+            }
+
+            switch (effect.effectType)
+            {
+                case CardEffectType.IncreaseFriendlyChampionAttack:
+                    opponentChampionDisplay.ModifyAttack(effect.value);
+                    break;
+
+                case CardEffectType.DecreaseFriendlyChampionAttack:
+                    opponentChampionDisplay.ModifyAttack(-effect.value);
+                    break;
+
+                case CardEffectType.IncreaseEnemyChampionAttack:
+                    championDisplay.ModifyAttack(effect.value);
+                    break;
+
+                case CardEffectType.DecreaseEnemyChampionAttack:
+                    championDisplay.ModifyAttack(-effect.value);
+                    break;
+
+                default:
+                    Debug.LogWarning(
+                        $"Effet OncePerTurn non encore pris en charge pour le terrain adverse : {effect.effectType}"
+                    );
+                    return;
+            }
+
+            if (effect.activationCost == ActivationCostType.ExhaustCard)
+                terrainState.Exhaust();
+
+            terrainState.MarkEffectAsUsed(i);
+
+            Debug.Log(
+                $"Le terrain adverse {cardView.Data.cardName} a activé son effet OncePerTurn."
+            );
+
+            return;
+        }
+    }
+    public void ReadyOpponentTerrain()
+    {
+        if (opponentTerrainZone == null)
+        {
+            Debug.LogWarning("La zone Terrain adverse n'est pas assignée.");
+            return;
+        }
+
+        TerrainCardState terrainState =
+            opponentTerrainZone.GetComponentInChildren<TerrainCardState>();
+
+        if (terrainState == null)
+            return;
+
+        terrainState.Ready();
+        terrainState.ResetOncePerTurnEffects();
+
+        Debug.Log("Terrain adverse redressé : effets OncePerTurn réinitialisés.");
+    }
+    public void DestroyAllTerrains()
+    {
+        // Détruire le terrain du joueur.
+        if (playerTerrainZone != null)
+        {
+            CardView playerTerrain =
+                playerTerrainZone.GetComponentInChildren<CardView>();
+
+            if (playerTerrain != null)
+            {
+                if (playerTrashManager == null)
+                {
+                    Debug.LogError("TrashManager du joueur non assigné.");
+                }
+                else
+                {
+                    TerrainCardState terrainState =
+                        playerTerrain.GetComponent<TerrainCardState>();
+
+                    if (selectedTerrain != null &&
+                        selectedTerrain.gameObject == playerTerrain.gameObject)
+                    {
+                        selectedTerrain.GetComponent<CardView>()?.SetSelected(false);
+                        selectedTerrain = null;
+                    }
+
+                    if (terrainState != null)
+                        Destroy(terrainState);
+
+                    TerrainClickHandler clickHandler =
+                        playerTerrain.GetComponent<TerrainClickHandler>();
+
+                    if (clickHandler != null)
+                        Destroy(clickHandler);
+
+                    playerTrashManager.AddCard(playerTerrain);
+
+                    Debug.Log("Ton terrain a été envoyé dans ta Trash.");
+                }
+            }
+        }
+
+        // Détruire le terrain adverse.
+        if (opponentUnitSpawner != null)
+        {
+            opponentUnitSpawner.DestroyOpponentTerrain();
+        }
+        else
+        {
+            Debug.LogError("OpponentUnitSpawner non assigné.");
+        }
+
+        UpdateActivateEffectButton();
+
+        Debug.Log("Effet DestroyAllTerrains résolu.");
+    }
+    public void ResolveOpponentTerrainOnPlay(CardData data)
+    {
+        if (data == null || data.effects == null)
+            return;
+
+        foreach (CardEffectData effect in data.effects)
+        {
+            if (effect == null || effect.trigger != EffectTrigger.OnPlay)
+                continue;
+
+            switch (effect.effectType)
+            {
+                case CardEffectType.IncreaseFriendlyChampionAttack:
+                    if (opponentChampionDisplay != null)
+                        opponentChampionDisplay.ModifyAttack(effect.value);
+                    break;
+
+                case CardEffectType.DecreaseFriendlyChampionAttack:
+                    if (opponentChampionDisplay != null)
+                        opponentChampionDisplay.ModifyAttack(-effect.value);
+                    break;
+
+                case CardEffectType.IncreaseEnemyChampionAttack:
+                    if (championDisplay != null)
+                        championDisplay.ModifyAttack(effect.value);
+                    break;
+
+                case CardEffectType.DecreaseEnemyChampionAttack:
+                    if (championDisplay != null)
+                        championDisplay.ModifyAttack(-effect.value);
+                    break;
+            }
+        }
+
+        Debug.Log($"Effets OnPlay du terrain adverse résolus : {data.cardName}.");
+    }
     public void ResolveCardEffectsOnDeath(CardData data, UnitCardState unit)
     {
         ResolveCardEffects(data, EffectTrigger.OnDeath, unit);
@@ -943,6 +1143,13 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        if (waitingForHandDiscard)
+        {
+            CancelPendingHandDiscard();
+            CancelOncePerTurnActivation();
+            return;
+        }
+
         Debug.Log("Aucun effet ne peut être annulé actuellement.");
     }
     private void EnqueueEffect(System.Action effectAction)
@@ -962,7 +1169,7 @@ public class GameManager : MonoBehaviour
 
             nextEffect?.Invoke();
 
-            if (waitingForEffectTarget || waitingForHealTarget || waitingForAttackTarget || waitingForTrashCard)
+            if (waitingForEffectTarget || waitingForHealTarget || waitingForAttackTarget || waitingForTrashCard || waitingForHandDiscard)
             {
                 resolvingEffectQueue = false;
                 return;
@@ -970,7 +1177,7 @@ public class GameManager : MonoBehaviour
         }
 
         resolvingEffectQueue = false;
-        if (pendingSpellCard != null && pendingEffects.Count == 0 && !waitingForEffectTarget && !waitingForHealTarget && !waitingForAttackTarget && !waitingForTrashCard)
+        if (pendingSpellCard != null && pendingEffects.Count == 0 && !waitingForEffectTarget && !waitingForHealTarget && !waitingForAttackTarget && !waitingForTrashCard && !waitingForHandDiscard)
         {
             CompleteSpellResolution();
         }
@@ -1163,6 +1370,30 @@ public class GameManager : MonoBehaviour
 
         Debug.Log($"{data.cardName} : choisis une carte dans ta Trash pour la récupérer vers {destination}.");
     }
+    private void BeginHandDiscardEffect(CardData data, bool mustResolve)
+    {
+        if (playerHand == null || playerHand.CardCOunt == 0)
+        {
+            if (mustResolve)
+            {
+                Debug.Log("Impossible de résoudre l'effet : ta main ne contient aucune carte à défausser.");
+            }
+            else
+            {
+                Debug.Log("Effet facultatif ignoré : aucune carte dans ta main.");
+            }
+
+            return;
+        }
+
+        waitingForHandDiscard = true;
+
+        cancelEffectButton?.SetActive(true);
+
+        Debug.Log(
+            $"{data.cardName} : sélectionne une carte de ta main à envoyer dans la Trash."
+        );
+    }
     private void ResolveCardEffects(CardData data, EffectTrigger trigger, UnitCardState sourceUnit = null)
     {
         if(data == null || data.effects == null)
@@ -1293,6 +1524,25 @@ public class GameManager : MonoBehaviour
 
                 case CardEffectType.RecoverCardFromTrashToDeck:
                     BeginTrashRecoveryEffect(data, false);
+                    break;
+
+                case CardEffectType.DiscardCardFromHandToTrash:
+                    BeginHandDiscardEffect(data, effect.mustResolve);
+                    break;
+
+                case CardEffectType.DestroyOpponentTerrain:
+                    if (opponentUnitSpawner != null)
+                    {
+                        opponentUnitSpawner.DestroyOpponentTerrain();
+                    }
+                    else
+                    {
+                        Debug.LogError("OpponentUnitSpawner n'est pas assigné.");
+                    }
+                    break;
+
+                case CardEffectType.DestroyAllTerrains:
+                    DestroyAllTerrains();
                     break;
 
                 case CardEffectType.GainLife:
@@ -1462,6 +1712,25 @@ public class GameManager : MonoBehaviour
                 BeginTrashRecoveryEffect(data, false);
                 break;
 
+            case CardEffectType.DiscardCardFromHandToTrash:
+                BeginHandDiscardEffect(data, effect.mustResolve);
+                break;
+
+            case CardEffectType.DestroyOpponentTerrain:
+                if (opponentUnitSpawner != null)
+                {
+                    opponentUnitSpawner.DestroyOpponentTerrain();
+                }
+                else
+                {
+                    Debug.LogError("OpponentUnitSpawner n'est pas assigné.");
+                }
+                break;
+
+            case CardEffectType.DestroyAllTerrains:
+                DestroyAllTerrains();
+                break;
+
             case CardEffectType.GainLife:
                 for (int i = 0; i < effect.value; i++)
                 {
@@ -1548,6 +1817,34 @@ public class GameManager : MonoBehaviour
         }
 
         Debug.Log("Aucune unité adverse à cibler.");
+    }
+    private void OnHandCardSelected(CardView card)
+    {
+        if (!waitingForHandDiscard || card == null)
+            return;
+
+        if (playerTrashManager == null)
+        {
+            Debug.LogError("Le TrashManager du joueur n'est pas assigné.");
+            return;
+        }
+
+        CardData data = card.Data;
+
+        // Retirer la carte de la main.
+        playerHand.RemoveCard(card);
+
+        // Envoyer la carte dans la Trash.
+        playerTrashManager.AddCard(card);
+
+        waitingForHandDiscard = false;
+        cancelEffectButton?.SetActive(false);
+
+        Debug.Log($"{data.cardName} a été défaussée depuis la main.");
+
+        CompleteOncePerTurnActivation();
+        ProcessNextPendingEffect();
+        CheckPendingPlayerTurnCompletion();
     }
     private void ResolveTurnEffectsForZone(Transform unitZone, EffectTrigger trigger)
     {
@@ -1730,6 +2027,27 @@ public class GameManager : MonoBehaviour
         CheckPendingPlayerTurnCompletion();
 
         Debug.Log("Récupération depuis la Trash annulée.");
+    }
+    private void CancelPendingHandDiscard()
+    {
+        if (!waitingForHandDiscard)
+            return;
+
+        waitingForHandDiscard = false;
+        cancelEffectButton?.SetActive(false);
+
+        if (pendingSpellCard != null)
+        {
+            CancelSpellResolution();
+            Debug.Log("La défausse et la résolution du sort ont été annulées.");
+            CheckPendingPlayerTurnCompletion();
+            return;
+        }
+
+        ProcessNextPendingEffect();
+        CheckPendingPlayerTurnCompletion();
+
+        Debug.Log("Défausse annulée : aucune carte n'a été envoyée dans la Trash.");
     }
     private void CancelOncePerTurnActivation()
     {

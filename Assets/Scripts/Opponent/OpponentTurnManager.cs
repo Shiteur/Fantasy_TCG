@@ -29,6 +29,7 @@ public class OpponentTurnManager : MonoBehaviour
             return;
 
         opponentUnitSpawner.ReadyAllOpponentUnits();
+        gameManager.ReadyOpponentTerrain();
 
         if (opponentChampionDisplay != null && opponentChampionDisplay.ChampionState != null)
         {
@@ -37,6 +38,7 @@ public class OpponentTurnManager : MonoBehaviour
             opponentChampionDisplay.ChampionView.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
             Debug.Log("Champion adverse remis en Ready.");
         }
+        gameManager.ActivateOpponentTerrainOncePerTurn();
 
         if (opponentTurnCoroutine != null)
             StopCoroutine(opponentTurnCoroutine);

@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 83e94f7d3af7d65459a8bfa3540c46f0, type: 3}
+  m_Name: VikingVillage
+  m_EditorClassIdentifier: Assembly-CSharp::CardData
+  cardId: T2
+  cardName: Village Viking
+  cardType: 3
+  cardColor: 5
+  hasSecondaryColor: 0
+  secondaryColor: 0
+  manaCost: 3
+  attack: 0
+  maxHealth: 0
+  initialLifeCard: 0
+  abilities: 
+  effects:
+  - trigger: 2
+    effectType: 7
+    value: 1
+    conditionValue: 0
+    activationCost: 1
+    activationManaCost: 0
+    mustResolve: 0
+  description: 

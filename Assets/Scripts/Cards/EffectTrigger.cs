@@ -40,5 +40,9 @@ public enum CardEffectType
     IncreaseFriendlyUnitManaCost,
     KnockOutEnemyUnitByManaCost,
     RecoverCardFromTrashToHand,
-    RecoverCardFromTrashToDeck
+    RecoverCardFromTrashToDeck,
+    DestroyOpponentTerrain,
+    DestroyAllTerrains,
+    DiscardCardFromHandToTrash,
+    ReturnFriendlyUnitToHand
 }
